@@ -1,0 +1,232 @@
+---
+title: "ST606_W2"
+author: "YANG WANG"
+date: "2020/4/2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+suppressMessages(library(readxl))
+#suppressMessages(library(plotly))
+suppressMessages(library(randomForest))
+suppressMessages(library(dplyr))
+suppressMessages(library(GGally))
+suppressMessages(library(ggplot2))
+suppressMessages(library(scatterplot3d))
+
+########################################################
+## Clean Data
+##
+## Delete the data which height and weight = 'NA' (Invalid BMI data)
+########################################################
+dat_ex_all <- read_excel("./SharedFiles/ST606/2020/data/Exercise/fit_database_anthropometric_all.xlsx", sheet=1, na='NA')
+
+# Clean data (delete all data that the follow conditions are NA)
+dat <- subset(dat_ex_all, `height (cm)` != 'NA' 
+                & `weight (kg)` != 'NA')
+
+dat$mYear <- substr(as.character(dat$`measurement date`), start=1, stop=4)
+
+colnames(dat)[10] <- 'z_category'
+colnames(dat)[9] <- 'z_score'
+colnames(dat)[2] <- 'm_date'
+colnames(dat)[3] <- 'age'
+colnames(dat)[4] <- 'age_bin'
+colnames(dat)[6] <- 'height'
+colnames(dat)[7] <- 'weight'
+
+dataSta <- data.frame(all = nrow(dat_ex_all), obj = nrow(dat), del = nrow(dat_ex_all) - nrow(dat)) 
+```
+
+####  Distribution of BMI
+Different gender's data is almost similar.
+
+```{r}
+########################################################
+## Distribution of BMI
+##
+## Different gender's data is almost similar.
+########################################################
+# BMI's distribution
+p <- ggplot(data = dat) +
+geom_histogram(mapping = aes(x = BMI), color="black", fill="lightblue")
+p
+
+# BMI by gender
+p+ facet_wrap(~gender)
+
+ggplot(data = dat) + geom_density(mapping = aes(x = BMI))
+```
+```{r}
+########################################################
+## z-category by gender
+##
+## Normal: boy < girl
+## Overweight: boy < girl
+## Obese: boy > girl
+## thin: boy > girl
+## severely thin: boy > girl
+## 
+## Normal > Overweight > Obese > thin >severely thin
+########################################################
+
+# ALL
+dat$`z-category` = factor(dat$`z-category`, levels=c('normal','overweight','obese','thin','severely thin'))
+
+ggplot(data = dat) + geom_bar(mapping = aes(x = `z-category`, fill=gender))
+
+dat_boy <- subset(dat, gender == 'boy')
+dat_girl <- subset(dat, gender == 'girl')
+tab_a <- table(dat$`z-category`)
+tab_b <- table(dat_boy$`z-category`)
+tab_g <- table(dat_girl$`z-category`)
+
+cbind('All' = tab_a, 'Boy' = tab_b, 'Girl' = tab_g, 'BoyVsGirl' = tab_b - tab_g)
+
+ggplot(data = dat_boy) +
+geom_bar(mapping = aes(x = "", fill=`z-category`), position = "fill", width=1) + 
+ggtitle("Z-category(Boy)") +
+coord_polar("y")+
+theme( axis.title=element_blank(),
+axis.text=element_blank(),
+axis.ticks=element_blank())
+
+ggplot(data = dat_girl) +
+geom_bar(mapping = aes(x = "", fill=`z-category`), position = "fill", width=1) + 
+ggtitle("Z-category(Girl)") +
+coord_polar("y")+
+theme( axis.title=element_blank(),
+axis.text=element_blank(),
+axis.ticks=element_blank())
+```
+
+
+
+```{r}
+########################################################
+## Z-category ~ Height + Weight + age + gender
+## 
+## cluster relationship
+########################################################
+
+ggplot(data = dat) + geom_point(mapping = aes(x = `weight (kg)`, y = `height (cm)`, color=`z-category`))
+
+fig_boy <- plot_ly(dat_boy, x = ~`weight (kg)`, y = ~`height (cm)`, z = ~`age (years)`, color = ~`z-category`)
+fig_boy <- fig_boy %>% add_markers()
+fig_boy
+
+fig_girl <- plot_ly(dat_girl, x = ~`weight (kg)`, y = ~`height (cm)`, z = ~`age (years)`, color = ~`z-category`)
+fig_girl <- fig_girl %>% add_markers()
+fig_girl
+
+```
+
+```{r}
+########################################################
+## Predict Z-category ~ height + weight + age + gender (Machine Learning)
+##  
+## Sample 80% as training data
+## Sample 20% as test data
+## Use randomForest algorithm to learn the function
+## then use the test data to predict the z-category and compare the actual result to chect the funtion
+########################################################
+
+dat_learn <- dat
+
+## change gender to number (boy:1, girl:0)
+dat_learn$gender[dat_learn$gender == "boy"] <- 1
+dat_learn$gender[dat_learn$gender == "girl"] <- 0
+dat_learn$gender <- as.numeric(dat_learn$gender)
+
+## measurement date,age (years), age bin have strong Collinearity. So I only remain the age(years)
+dat_learn <- cbind(dat_learn[, 3], dat_learn[, 5:7], dat_learn[, 10]) 
+names(dat_learn)[1:4]<-c("age", "gender", "height", "weight")
+
+## sampling 80% for training, 20% for test.
+ind <- sample(c(1,2), nrow(dat_learn), replace=T, prob = c(0.8, 0.2))
+## training data
+trainData <- dat_learn[ind == 1,]
+## test data
+testData <- dat_learn[ind == 2,]
+
+set.seed(500)
+ez.forest <- randomForest(`z-category` ~., data = trainData,
+                          na.action = na.roughfix,
+                          importance = TRUE)
+ez.forest
+importance(ez.forest,type=2)
+
+forest.pred <- predict(ez.forest, testData)
+forest.perf <- table(testData$`z-category`, forest.pred,
+                     dnn = c('Actual','Predicted'))
+forest.perf
+
+```
+
+
+```{r}
+library("plm")
+library("prediction")
+memory.limit(size = NA)
+# 7244
+dat$m_date = as.character(dat$m_date)
+dat[which(dat$ID=="1251"),]
+#dat[which(dat$ID=="7244" & dat$m_date == '2014-10-01'), 'age'] = dat[which(dat$ID=="7244" & dat$m_date == '2014-10-01'), 'age'] + 1
+#dat[which(dat$ID=="7244" & dat$m_date == '2014-10-01'), 'age_bin'] = dat[which(dat$ID=="7244" & dat$m_date == '2014-10-01'), 'age_bin'] + 1
+#2258
+#delRowNo <- which(dat$ID=="2258" & dat$weight == 46)
+#dat <- dat[-delRowNo , ] 
+
+## 1251  1309  1471  1629  2258  2727  2769 2770
+dat$new_age_bin = as.factor(ifelse((dat$age - dat$age_bin)>= 0.5,dat$age_bin + 0.5 , dat$age_bin))
+dat$gender = as.factor(dat$gender)
+  
+  
+dat$indx <- paste(dat$ID, dat$new_age_bin, sep='||')
+index <- duplicated(dat[,13])
+dat_unq <- dat[!index, 1:12]
+
+
+
+dat_unq$last_rs = rep(NA, times = nrow(dat_unq))
+bId <- 0
+z18 <- 0
+for (i in 1:nrow(dat_unq)) {
+  id <- dat_unq[i,1]$ID
+  if (id == bId) {
+    if (nrow(z18) != 0) {
+      dat_unq$last_rs[i] = z18$z_score
+    }
+  }
+  else {
+    z18 <- dat_unq[which(dat_unq$ID==id & dat_unq$new_age_bin == '18.5'), 'z_score']
+    if (nrow(z18) == 0) {
+      z18 <- dat_unq[which(dat_unq$ID==id & dat_unq$new_age_bin == '18'), 'z_score']
+    }
+    if (nrow(z18) != 0) {
+      dat_unq$last_rs[i] = z18$z_score
+    } else {
+      dat_unq$last_rs[i] = NA
+      z18$z_score <- NA
+    }
+    bId <- id
+  }
+}
+
+dat_Last <- dat_unq[which(is.na(dat_unq$last_rs) == FALSE ), ]
+fitPlm <- plm(last_rs~ gender + z_score + new_age_bin, data=dat_Last, model = 'pooling', effect = "twoways", index=c("ID", "new_age_bin"))
+summary(fitPlm)
+
+beta <- coef(fitPlm)
+X <- model.matrix(fitPlm)
+crossprod(t(X), beta)
+predict(fitPlm, dat_Last[which(dat_Last$ID=="1"),])
+```
+```{r}
+
+
+```
