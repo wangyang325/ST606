@@ -1,7 +1,7 @@
 ---
-title: "ST606_W3"
+title: "ST606_W4"
 author: "YANG WANG"
-date: "2020/4/2"
+date: "2020/4/28"
 output: html_document
 ---
 
@@ -17,7 +17,7 @@ suppressMessages(library(dplyr))
 suppressMessages(library(GGally))
 suppressMessages(library(ggplot2))
 suppressMessages(library(scatterplot3d))
-suppressMessages(library(plm))
+suppressMessages(library(sitar))
 
 ########################################################
 ## Clean Data
@@ -41,8 +41,6 @@ colnames(dat)[4] <- 'age_bin'
 colnames(dat)[6] <- 'height'
 colnames(dat)[7] <- 'weight'
 
-dataSta <- data.frame(all = nrow(dat_ex_all), obj = nrow(dat), del = nrow(dat_ex_all) - nrow(dat)) 
-
 # new age bin by 0.5 year
 dat$new_age_bin = as.factor(ifelse((dat$age - dat$age_bin)>= 0.5,dat$age_bin + 0.5 , dat$age_bin))
 
@@ -51,532 +49,250 @@ dat$indx <- paste(dat$ID, dat$new_age_bin, sep='||')
 index <- duplicated(dat[,13])
 dat_u <- dat[!index, 1:12]
 
+dat_u$ID = as.character(dat_u$ID)
+
+# check the deleted data
+dataSta <- data.frame(All = nrow(dat_ex_all), Object = nrow(dat_u), Deleted = nrow(dat_ex_all) - nrow(dat_u)) 
+dataSta
 ```
+
+1. Clean data
+
+a) Deleted the rows which the column of height or the column of weight are NA.
+
+b) Deleted the invalid data(duplicated measure data)
+
+c) All rows: 102642; deleted rows: 7968; Object rows:94674
+
 ```{r}
 ########################################################
-## Show the pie chart
+## Get the ratio
 ##  data: input data
-##  type: 0:by year 1:by age
-##  value: condition
 ##  gender: 0:Girl 1:Boy 2:All
 ########################################################
-showPie <- function(data, type, value, gender) {
-  title <- 'The Healthy Ratio'
-  # by year
-  if (type == 0) {
-    title <- paste(title," in ", value)
-    # Gender:All
-    if (gender == 2) {
-      # all 
-      nums <-  c(nrow(dat_uc[which(dat_uc$z_category=="normal" & dat_uc$mYear==value ),]),nrow(dat_uc[which(dat_uc$z_category=="obese" & dat_uc$mYear==value ),]),nrow(dat_uc[which(dat_uc$z_category=="overweight"& dat_uc$mYear==value ),]),nrow(dat_uc[which(dat_uc$z_category=="severely thin"& dat_uc$mYear==value ),]),nrow(dat_uc[which(dat_uc$z_category=="thin"& dat_uc$mYear==value ),]))
-      drawPie(nums, title)
-    }
-    # Gender:Boy
-    else if (gender == 1) {
-      # boy
-      title1 <- paste(title," (Boy)")
-      nums <-  c(nrow(dat_uc[which(dat_uc$z_category=="normal" & dat_uc$mYear==value & dat_uc$gender=='boy'),]),nrow(dat_uc[which(dat_uc$z_category=="obese" & dat_uc$mYear==value & dat_uc$gender=='boy'),]),nrow(dat_uc[which(dat_uc$z_category=="overweight" & dat_uc$mYear==value & dat_uc$gender=='boy'),]),nrow(dat_uc[which(dat_uc$z_category=="severely thin"& dat_uc$mYear==value & dat_uc$gender=='boy'),]),nrow(dat_uc[which(dat_uc$z_category=="thin"& dat_uc$mYear==value & dat_uc$gender=='boy'),]))
-      drawPie(nums, title1)
-    } 
-    # Gender:Girl
-    else if (gender == 0) {
-    # girl
-      title2 <- paste(title," (Girl)")
-      nums <-  c(nrow(dat_uc[which(dat_uc$z_category=="normal" & dat_uc$mYear==value & dat_uc$gender=='girl'),]),nrow(dat_uc[which(dat_uc$z_category=="obese" & dat_uc$mYear==value & dat_uc$gender=='girl'),]),nrow(dat_uc[which(dat_uc$z_category=="overweight" & dat_uc$mYear==value & dat_uc$gender=='girl'),]),nrow(dat_uc[which(dat_uc$z_category=="severely thin"& dat_uc$mYear==value & dat_uc$gender=='girl'),]),nrow(dat_uc[which(dat_uc$z_category=="thin"& dat_uc$mYear==value & dat_uc$gender=='girl'),]))
-      drawPie(nums, title2)
-    }
-  }
-  # by age bin
-  else {
-    title <- paste(title," ", value, " year-old")
-    # Gender:All
-    if (gender == 2) {
-      # all 
-      nums <-  c(nrow(dat_uc[which(dat_uc$z_category=="normal" & dat_uc$age_bin==value ),]),nrow(dat_uc[which(dat_uc$z_category=="obese" & dat_uc$age_bin==value ),]),nrow(dat_uc[which(dat_uc$z_category=="overweight"& dat_uc$age_bin==value ),]),nrow(dat_uc[which(dat_uc$z_category=="severely thin"& dat_uc$age_bin==value ),]),nrow(dat_uc[which(dat_uc$z_category=="thin"& dat_uc$age_bin==value ),]))
-      drawPie(nums, title)
-    } 
-    # Gender:Boy
-    else if (gender == 1) {
-      # boy
-      title1 <- paste(title," (Boy)")
-      nums <-  c(nrow(dat_uc[which(dat_uc$z_category=="normal" & dat_uc$age_bin==value & dat_uc$gender=='boy'),]),nrow(dat_uc[which(dat_uc$z_category=="obese" & dat_uc$age_bin==value & dat_uc$gender=='boy'),]),nrow(dat_uc[which(dat_uc$z_category=="overweight" & dat_uc$age_bin==value & dat_uc$gender=='boy'),]),nrow(dat_uc[which(dat_uc$z_category=="severely thin"& dat_uc$age_bin==value & dat_uc$gender=='boy'),]),nrow(dat_uc[which(dat_uc$z_category=="thin"& dat_uc$age_bin==value & dat_uc$gender=='boy'),]))
-      drawPie(nums, title1)
-    } 
-    # Gender:Girl
-    else if (gender == 0) {
-    # girl
-      title2 <- paste(title," (Girl)")
-      nums <-  c(nrow(dat_uc[which(dat_uc$z_category=="normal" & dat_uc$age_bin==value & dat_uc$gender=='girl'),]),nrow(dat_uc[which(dat_uc$z_category=="obese" & dat_uc$age_bin==value & dat_uc$gender=='girl'),]),nrow(dat_uc[which(dat_uc$z_category=="overweight" & dat_uc$age_bin==value & dat_uc$gender=='girl'),]),nrow(dat_uc[which(dat_uc$z_category=="severely thin"& dat_uc$age_bin==value & dat_uc$gender=='girl'),]),nrow(dat_uc[which(dat_uc$z_category=="thin"& dat_uc$age_bin==value & dat_uc$gender=='girl'),]))
-      drawPie(nums, title2)
-    }    
-  }
-}
-########################################################
-## Show the pie chart
-##  data: input data
-##  type: 0:by year 1:by age
-##  value: condition
-##  gender: 0:Girl 1:Boy 2:All
-########################################################
-getRatio <- function(data, type, gender) {
+getRatio <- function(data, gender) {
   pDataNor <- c()
   pDataObe <- c()
   pDataOver <- c()
   pDataSThin <- c()
   pDataThin <- c()
-  # by year
-  if (type == 0) {
-    # Gender:All
-    if (gender == 2) {
-      # all
-      for (value in 2007:2018) {
-        norPer <- nrow(dat_uc[which(dat_uc$z_category=="normal" & dat_uc$mYear==value),])/nrow(dat_uc[which(dat_uc$mYear==value),])
-        pDataNor <- c(pDataNor, norPer)
+  # Gender:All
+  if (gender == 2) {
+    # all 
+    for (value in 6:18) {
+      norPer <- nrow(data[which(data$z_category=="normal" & data$age_bin==value),])/nrow(data[which(data$age_bin==value),])
+      pDataNor <- c(pDataNor, norPer)
 
-        norObe <- nrow(dat_uc[which(dat_uc$z_category=="obese" & dat_uc$mYear==value ),])/nrow(dat_uc[which(dat_uc$mYear==value),])
-        pDataObe <- c(pDataObe, norObe)
-        
-        norOver <- nrow(dat_uc[which(dat_uc$z_category=="overweight" & dat_uc$mYear==value ),])/nrow(dat_uc[which(dat_uc$mYear==value),])
-        pDataOver <- c(pDataOver, norOver)
-        
-        norSThin <- nrow(dat_uc[which(dat_uc$z_category=="severely thin" & dat_uc$mYear==value ),])/nrow(dat_uc[which(dat_uc$mYear==value),])
-        pDataSThin <- c(pDataSThin, norSThin)
-        
-        norThin <- nrow(dat_uc[which(dat_uc$z_category=="thin" & dat_uc$mYear==value ),])/nrow(dat_uc[which(dat_uc$mYear==value),])
-        pDataThin <- c(pDataThin, norThin)
-      }
-      pData <- c(pDataNor, pDataObe, pDataOver, pDataSThin, pDataThin)
-      pData
+      norObe <- nrow(data[which(data$z_category=="obese" & data$age_bin==value ),])/nrow(data[which(data$age_bin==value),])
+      pDataObe <- c(pDataObe, norObe)
+      
+      norOver <- nrow(data[which(data$z_category=="overweight" & data$age_bin==value ),])/nrow(data[which(data$age_bin==value),])
+      pDataOver <- c(pDataOver, norOver)
+      
+      norSThin <- nrow(data[which(data$z_category=="severely thin" & data$age_bin==value ),])/nrow(data[which(data$age_bin==value),])
+      pDataSThin <- c(pDataSThin, norSThin)
+      
+      norThin <- nrow(data[which(data$z_category=="thin" & data$age_bin==value ),])/nrow(data[which(data$age_bin==value),])
+      pDataThin <- c(pDataThin, norThin)
     }
-    # Gender:Boy
-    else if (gender == 1) {
-      # boy
-     for (value in 2007:2018) {
-        norPer <- nrow(dat_uc[which(dat_uc$z_category=="normal" & dat_uc$mYear==value & dat_uc$gender=='boy'),])/nrow(dat_uc[which(dat_uc$mYear==value & dat_uc$gender=='boy'),])
-        pDataNor <- c(pDataNor, norPer)
+    pData <- c(pDataNor, pDataObe, pDataOver, pDataSThin, pDataThin)
+    pData
+  } 
+  # Gender:Boy
+  else if (gender == 1) {
+    # boy
+    for (value in 6:18) {
+      norPer <- nrow(data[which(data$z_category=="normal" & data$age_bin==value & data$gender=='boy'),])/nrow(data[which(data$age_bin==value & data$gender=='boy'),])
+      pDataNor <- c(pDataNor, norPer)
 
-        norObe <- nrow(dat_uc[which(dat_uc$z_category=="obese" & dat_uc$mYear==value & dat_uc$gender=='boy' ),])/nrow(dat_uc[which(dat_uc$mYear==value & dat_uc$gender=='boy'),])
-        pDataObe <- c(pDataObe, norObe)
-        
-        norOver <- nrow(dat_uc[which(dat_uc$z_category=="overweight" & dat_uc$mYear==value & dat_uc$gender=='boy' ),])/nrow(dat_uc[which(dat_uc$mYear==value & dat_uc$gender=='boy'),])
-        pDataOver <- c(pDataOver, norOver)
-        
-        norSThin <- nrow(dat_uc[which(dat_uc$z_category=="severely thin" & dat_uc$mYear==value & dat_uc$gender=='boy' ),])/nrow(dat_uc[which(dat_uc$mYear==value & dat_uc$gender=='boy'),])
-        pDataSThin <- c(pDataSThin, norSThin)
-        
-        norThin <- nrow(dat_uc[which(dat_uc$z_category=="thin" & dat_uc$mYear==value & dat_uc$gender=='boy' ),])/nrow(dat_uc[which(dat_uc$mYear==value & dat_uc$gender=='boy'),])
-        pDataThin <- c(pDataThin, norThin)
-      }
-      pData <- c(pDataNor, pDataObe, pDataOver, pDataSThin, pDataThin)
-      pData
-    } 
-    # Gender:Girl
-    else if (gender == 0) {
-    # girl
-     for (value in 2007:2018) {
-        norPer <- nrow(dat_uc[which(dat_uc$z_category=="normal" & dat_uc$mYear==value & dat_uc$gender=='girl'),])/nrow(dat_uc[which(dat_uc$mYear==value & dat_uc$gender=='girl'),])
-        pDataNor <- c(pDataNor, norPer)
-
-        norObe <- nrow(dat_uc[which(dat_uc$z_category=="obese" & dat_uc$mYear==value & dat_uc$gender=='girl' ),])/nrow(dat_uc[which(dat_uc$mYear==value & dat_uc$gender=='girl'),])
-        pDataObe <- c(pDataObe, norObe)
-        
-        norOver <- nrow(dat_uc[which(dat_uc$z_category=="overweight" & dat_uc$mYear==value & dat_uc$gender=='girl' ),])/nrow(dat_uc[which(dat_uc$mYear==value & dat_uc$gender=='girl'),])
-        pDataOver <- c(pDataOver, norOver)
-        
-        norSThin <- nrow(dat_uc[which(dat_uc$z_category=="severely thin" & dat_uc$mYear==value & dat_uc$gender=='girl' ),])/nrow(dat_uc[which(dat_uc$mYear==value & dat_uc$gender=='girl'),])
-        pDataSThin <- c(pDataSThin, norSThin)
-        
-        norThin <- nrow(dat_uc[which(dat_uc$z_category=="thin" & dat_uc$mYear==value & dat_uc$gender=='girl' ),])/nrow(dat_uc[which(dat_uc$mYear==value & dat_uc$gender=='girl'),])
-        pDataThin <- c(pDataThin, norThin)
-      }
-      pData <- c(pDataNor, pDataObe, pDataOver, pDataSThin, pDataThin)
-      pData
+      norObe <- nrow(data[which(data$z_category=="obese" & data$age_bin==value & data$gender=='boy' ),])/nrow(data[which(data$age_bin==value & data$gender=='boy'),])
+      pDataObe <- c(pDataObe, norObe)
+      
+      norOver <- nrow(data[which(data$z_category=="overweight" & data$age_bin==value & data$gender=='boy' ),])/nrow(data[which(data$age_bin==value & data$gender=='boy'),])
+      pDataOver <- c(pDataOver, norOver)
+      
+      norSThin <- nrow(data[which(data$z_category=="severely thin" & data$age_bin==value & data$gender=='boy' ),])/nrow(data[which(data$age_bin==value & data$gender=='boy'),])
+      pDataSThin <- c(pDataSThin, norSThin)
+      
+      norThin <- nrow(data[which(data$z_category=="thin" & data$age_bin==value & data$gender=='boy' ),])/nrow(data[which(data$age_bin==value & data$gender=='boy'),])
+      pDataThin <- c(pDataThin, norThin)
     }
+    pData <- c(pDataNor, pDataObe, pDataOver, pDataSThin, pDataThin)
+    pData
+  } 
+  # Gender:Girl
+  else if (gender == 0) {
+  # girl
+    for (value in 6:18) {
+      norPer <- nrow(data[which(data$z_category=="normal" & data$age_bin==value & data$gender=='girl'),])/nrow(data[which(data$age_bin==value & data$gender=='girl'),])
+      pDataNor <- c(pDataNor, norPer)
+
+      norObe <- nrow(data[which(data$z_category=="obese" & data$age_bin==value & data$gender=='girl' ),])/nrow(data[which(data$age_bin==value & data$gender=='girl'),])
+      pDataObe <- c(pDataObe, norObe)
+      
+      norOver <- nrow(data[which(data$z_category=="overweight" & data$age_bin==value & data$gender=='girl' ),])/nrow(data[which(data$age_bin==value & data$gender=='girl'),])
+      pDataOver <- c(pDataOver, norOver)
+      
+      norSThin <- nrow(data[which(data$z_category=="severely thin" & data$age_bin==value & data$gender=='girl' ),])/nrow(data[which(data$age_bin==value & data$gender=='girl'),])
+      pDataSThin <- c(pDataSThin, norSThin)
+      
+      norThin <- nrow(data[which(data$z_category=="thin" & data$age_bin==value & data$gender=='girl' ),])/nrow(data[which(data$age_bin==value & data$gender=='girl'),])
+      pDataThin <- c(pDataThin, norThin)
+    }
+    pData <- c(pDataNor, pDataObe, pDataOver, pDataSThin, pDataThin)
+    pData
   }
-  # by age bin
-  else {
-    # Gender:All
-    if (gender == 2) {
-      # all 
-      for (value in 6:18) {
-        norPer <- nrow(dat_uc[which(dat_uc$z_category=="normal" & dat_uc$age_bin==value),])/nrow(dat_uc[which(dat_uc$age_bin==value),])
-        pDataNor <- c(pDataNor, norPer)
-
-        norObe <- nrow(dat_uc[which(dat_uc$z_category=="obese" & dat_uc$age_bin==value ),])/nrow(dat_uc[which(dat_uc$age_bin==value),])
-        pDataObe <- c(pDataObe, norObe)
-        
-        norOver <- nrow(dat_uc[which(dat_uc$z_category=="overweight" & dat_uc$age_bin==value ),])/nrow(dat_uc[which(dat_uc$age_bin==value),])
-        pDataOver <- c(pDataOver, norOver)
-        
-        norSThin <- nrow(dat_uc[which(dat_uc$z_category=="severely thin" & dat_uc$age_bin==value ),])/nrow(dat_uc[which(dat_uc$age_bin==value),])
-        pDataSThin <- c(pDataSThin, norSThin)
-        
-        norThin <- nrow(dat_uc[which(dat_uc$z_category=="thin" & dat_uc$age_bin==value ),])/nrow(dat_uc[which(dat_uc$age_bin==value),])
-        pDataThin <- c(pDataThin, norThin)
-      }
-      pData <- c(pDataNor, pDataObe, pDataOver, pDataSThin, pDataThin)
-      pData
-    } 
-    # Gender:Boy
-    else if (gender == 1) {
-      # boy
-      for (value in 6:18) {
-        norPer <- nrow(dat_uc[which(dat_uc$z_category=="normal" & dat_uc$age_bin==value & dat_uc$gender=='boy'),])/nrow(dat_uc[which(dat_uc$age_bin==value & dat_uc$gender=='boy'),])
-        pDataNor <- c(pDataNor, norPer)
-
-        norObe <- nrow(dat_uc[which(dat_uc$z_category=="obese" & dat_uc$age_bin==value & dat_uc$gender=='boy' ),])/nrow(dat_uc[which(dat_uc$age_bin==value & dat_uc$gender=='boy'),])
-        pDataObe <- c(pDataObe, norObe)
-        
-        norOver <- nrow(dat_uc[which(dat_uc$z_category=="overweight" & dat_uc$age_bin==value & dat_uc$gender=='boy' ),])/nrow(dat_uc[which(dat_uc$age_bin==value & dat_uc$gender=='boy'),])
-        pDataOver <- c(pDataOver, norOver)
-        
-        norSThin <- nrow(dat_uc[which(dat_uc$z_category=="severely thin" & dat_uc$age_bin==value & dat_uc$gender=='boy' ),])/nrow(dat_uc[which(dat_uc$age_bin==value & dat_uc$gender=='boy'),])
-        pDataSThin <- c(pDataSThin, norSThin)
-        
-        norThin <- nrow(dat_uc[which(dat_uc$z_category=="thin" & dat_uc$age_bin==value & dat_uc$gender=='boy' ),])/nrow(dat_uc[which(dat_uc$age_bin==value & dat_uc$gender=='boy'),])
-        pDataThin <- c(pDataThin, norThin)
-      }
-      pData <- c(pDataNor, pDataObe, pDataOver, pDataSThin, pDataThin)
-      pData
-    } 
-    # Gender:Girl
-    else if (gender == 0) {
-    # girl
-      for (value in 6:18) {
-        norPer <- nrow(dat_uc[which(dat_uc$z_category=="normal" & dat_uc$age_bin==value & dat_uc$gender=='girl'),])/nrow(dat_uc[which(dat_uc$age_bin==value & dat_uc$gender=='girl'),])
-        pDataNor <- c(pDataNor, norPer)
-
-        norObe <- nrow(dat_uc[which(dat_uc$z_category=="obese" & dat_uc$age_bin==value & dat_uc$gender=='girl' ),])/nrow(dat_uc[which(dat_uc$age_bin==value & dat_uc$gender=='girl'),])
-        pDataObe <- c(pDataObe, norObe)
-        
-        norOver <- nrow(dat_uc[which(dat_uc$z_category=="overweight" & dat_uc$age_bin==value & dat_uc$gender=='girl' ),])/nrow(dat_uc[which(dat_uc$age_bin==value & dat_uc$gender=='girl'),])
-        pDataOver <- c(pDataOver, norOver)
-        
-        norSThin <- nrow(dat_uc[which(dat_uc$z_category=="severely thin" & dat_uc$age_bin==value & dat_uc$gender=='girl' ),])/nrow(dat_uc[which(dat_uc$age_bin==value & dat_uc$gender=='girl'),])
-        pDataSThin <- c(pDataSThin, norSThin)
-        
-        norThin <- nrow(dat_uc[which(dat_uc$z_category=="thin" & dat_uc$age_bin==value & dat_uc$gender=='girl' ),])/nrow(dat_uc[which(dat_uc$age_bin==value & dat_uc$gender=='girl'),])
-        pDataThin <- c(pDataThin, norThin)
-      }
-      pData <- c(pDataNor, pDataObe, pDataOver, pDataSThin, pDataThin)
-      pData
-    }    
-  }
-}
-########################################################
-## Draw the pie chart
-##  nums: count by category
-##  title: title
-########################################################
-drawPie <- function(nums, title){
-  # Create Data
-  data <- data.frame(
-    Category=c('normal','obese','overweight','severely thin', 'thin' ),
-    value=nums
-  )
-  
-  # Edit label 
-  label_value <- paste('(', round(data$value/sum(data$value) * 100, 1), '%)', sep = '')
-  label <- paste(data$Category, label_value, sep = '')
-  
-  # Basic piechart
-  ggplot(data, aes(x="", y=value, fill=Category)) +
-    geom_bar(stat="identity", width=1, color="white") +
-    theme_void() + coord_polar(theta = 'y') + labs(x = '', y = '', title = '') + theme(axis.text = element_blank()) + theme(axis.ticks = element_blank()) + scale_fill_discrete(labels = label) +
-    ggtitle(title)
 }
 ########################################################
 ## Show trend chart
 ##  data: input data
-##  type: 0:by year 1:by age
-##  gender: 0:Girl 1:Boy 2:All
 ########################################################
-showTrend <- function(data, ty, gender) {
-  if (ty == 0) {
-    title <- 'The trend of Healthy Ratio 2007~2018'
-    if (gender == 1) {
-      title <- paste(title, " (Boy)")
-    } else if (gender == 0) {
-      title <- paste(title, " (Girl)")
-    }
-    Year <- rep(2007:2018, times = 5)
-    type <- rep(c('normal','obese','overweight','severely thin', 'thin'), each = 12)
-    Proportion <- getRatio(data, ty, gender)
-    df <- data.frame(year = Year, type = type, proportion = Proportion)
-    ggplot(data = df, mapping = aes(x = Year, y = Proportion, colour = type)) + geom_line()+
+showTrend <- function(data, ty) {
+    title <- 'The proportion of z_category in 6~18 year-old'
+    Age <- rep(6:18, times = 10)
+    
+    typeB <- rep(c('Normal(Boy)','Obese(Boy)','Overweight(Boy)','Severely thin(Boy)', 'Thin(Boy)'), each = 13)
+    typeG <- rep(c('Normal(Girl)','Obese(Girl)','Overweight(Girl)','Severely thin(Girl)', 'Thin(Girl)'), each = 13)
+    type <- c(typeB, typeG)
+    
+    ProportionB <- getRatio(data, 1)
+    ProportionG <- getRatio(data, 0)
+    Proportion <- c(ProportionB, ProportionG)
+    
+    genderB <- rep('Boy', times = 65)
+    genderG <- rep('Girl', times = 65)
+    gender <- c(genderB, genderG)
+    
+    df <- data.frame(Age = Age, type = type, proportion = Proportion, gender=gender)
+    p <- ggplot(data = df, mapping = aes(x = Age, y = Proportion, colour = type)) + geom_line() +
         ggtitle(title)
-  } else {
-    title <- 'The trend of Healthy Ratio 6~18 year-old'
-    if (gender == 1) {
-      title <- paste(title, " (Boy)")
-    } else if (gender == 0) {
-      title <- paste(title, " (Girl)")
-    }
-    Age <- rep(6:18, times = 5)
-    type <- rep(c('normal','obese','overweight','severely thin', 'thin'), each = 13)
-    Proportion <- getRatio(data, ty, gender)
-    df <- data.frame(Age = Age, type = type, proportion = Proportion)
-    ggplot(data = df, mapping = aes(x = Age, y = Proportion, colour = type)) + geom_line()+
-        ggtitle(title)
-  }
-}
-```
-
-
-```{r}
-########################################################
-## z_category by age
-##
-## the percentage of different age
-########################################################
-# ALL
-dat_u$z_category = as.factor(dat_u$z_category)
-dat_uc <- dat_u
-dat_uc$count <- rep(1, times = nrow(dat_uc))
-
-# Show the pie by age
-showPie(dat_uc, 1, 6, 2)
-showPie(dat_uc, 1, 6, 1)
-showPie(dat_uc, 1, 6, 0)
-
-showPie(dat_uc, 1, 7, 2)
-showPie(dat_uc, 1, 7, 1)
-showPie(dat_uc, 1, 7, 0)
-
-showPie(dat_uc, 1, 8, 2)
-showPie(dat_uc, 1, 8, 1)
-showPie(dat_uc, 1, 8, 0)
-
-showPie(dat_uc, 1, 9, 2)
-showPie(dat_uc, 1, 9, 1)
-showPie(dat_uc, 1, 9, 0)
-
-showPie(dat_uc, 1, 10, 2)
-showPie(dat_uc, 1, 10, 1)
-showPie(dat_uc, 1, 10, 0)
-
-showPie(dat_uc, 1, 11, 2)
-showPie(dat_uc, 1, 11, 1)
-showPie(dat_uc, 1, 11, 0)
-
-showPie(dat_uc, 1, 12, 2)
-showPie(dat_uc, 1, 12, 1)
-showPie(dat_uc, 1, 12, 0)
-
-showPie(dat_uc, 1, 13, 2)
-showPie(dat_uc, 1, 13, 1)
-showPie(dat_uc, 1, 13, 0)
-
-showPie(dat_uc, 1, 14, 2)
-showPie(dat_uc, 1, 14, 1)
-showPie(dat_uc, 1, 14, 0)
-
-showPie(dat_uc, 1, 15, 2)
-showPie(dat_uc, 1, 15, 1)
-showPie(dat_uc, 1, 15, 0)
-
-showPie(dat_uc, 1, 16, 2)
-showPie(dat_uc, 1, 16, 1)
-showPie(dat_uc, 1, 16, 0)
-
-showPie(dat_uc, 1, 17, 2)
-showPie(dat_uc, 1, 17, 1)
-showPie(dat_uc, 1, 17, 0)
-
-showPie(dat_uc, 1, 18, 2)
-showPie(dat_uc, 1, 18, 1)
-showPie(dat_uc, 1, 18, 0)
-
-```
-
-```{r}
-########################################################
-## z_category By year
-##
-## the percentage of different year
-########################################################
-# Show the pie by year
-showPie(dat_uc, 0, '2007', 2)
-showPie(dat_uc, 0, '2007', 1)
-showPie(dat_uc, 0, '2007', 0)
-
-showPie(dat_uc, 0, '2008', 2)
-showPie(dat_uc, 0, '2008', 1)
-showPie(dat_uc, 0, '2008', 0)
-
-showPie(dat_uc, 0, '2009', 2)
-showPie(dat_uc, 0, '2009', 1)
-showPie(dat_uc, 0, '2009', 0)
-
-showPie(dat_uc, 0, '2010', 2)
-showPie(dat_uc, 0, '2010', 1)
-showPie(dat_uc, 0, '2010', 0)
-
-showPie(dat_uc, 0, '2011', 2)
-showPie(dat_uc, 0, '2011', 1)
-showPie(dat_uc, 0, '2011', 0)
-
-showPie(dat_uc, 0, '2012', 2)
-showPie(dat_uc, 0, '2012', 1)
-showPie(dat_uc, 0, '2012', 0)
-
-showPie(dat_uc, 0, '2013', 2)
-showPie(dat_uc, 0, '2013', 1)
-showPie(dat_uc, 0, '2013', 0)
-
-showPie(dat_uc, 0, '2014', 2)
-showPie(dat_uc, 0, '2014', 1)
-showPie(dat_uc, 0, '2014', 0)
-
-showPie(dat_uc, 0, '2015', 2)
-showPie(dat_uc, 0, '2015', 1)
-showPie(dat_uc, 0, '2015', 0)
-
-showPie(dat_uc, 0, '2016', 2)
-showPie(dat_uc, 0, '2016', 1)
-showPie(dat_uc, 0, '2016', 0)
-
-showPie(dat_uc, 0, '2017', 2)
-showPie(dat_uc, 0, '2017', 1)
-showPie(dat_uc, 0, '2017', 0)
-
-showPie(dat_uc, 0, '2018', 2)
-showPie(dat_uc, 0, '2018', 1)
-showPie(dat_uc, 0, '2018', 0)
-```
-```{r}
-########################################################
-## z_category By Year
-##
-## the trend
-########################################################
-# All
-showTrend(dat_uc, 0, 2)
-# Boy
-showTrend(dat_uc, 0, 1)
-# Girl
-showTrend(dat_uc, 0, 0)
-
-########################################################
-## z_category By age
-##
-## the trend
-########################################################
-# By Age
-# All
-showTrend(dat_uc, 1, 2)
-# Boy
-showTrend(dat_uc, 1, 1)
-# Girl
-showTrend(dat_uc, 1, 0)
-```
-
-```{r}
-########################################################
-## Z-category ~ Height + Weight + age + gender
-## 
-## cluster relationship
-########################################################
-ggplot(data = dat_uc) + geom_point(mapping = aes(x = weight, y = height, color=z_category))
-
-dat_boy <- dat_uc[which(dat_uc$gender=='boy' ),]
-fig_boy <- plot_ly(dat_boy, x=~`weight`, y = ~`height`, z = ~`age`, color = ~`z_category`)
-fig_boy <- fig_boy %>% add_markers()
-fig_boy
-
-dat_girl <- dat_uc[which(dat_uc$gender=='girl' ),]
-fig_girl <- plot_ly(dat_girl, x=~`weight`, y = ~`height`, z = ~`age`, color = ~`z_category`)
-fig_girl <- fig_girl %>% add_markers()
-fig_girl
-
-```
-
-```{r}
-########################################################
-## Predict Z-category ~ height + weight + age + gender (Machine Learning)
-##  
-## Sample 80% as training data
-## Sample 20% as test data
-## Use randomForest algorithm to learn the function
-## then use the test data to predict the z-category and compare the actual result to chect the funtion
-########################################################
-dat_learn <- dat_uc
-
-## change gender to number (boy:1, girl:0)
-dat_learn$gender[dat_learn$gender == "boy"] <- 1
-dat_learn$gender[dat_learn$gender == "girl"] <- 0
-dat_learn$gender <- as.numeric(dat_learn$gender)
-
-## measurement date,age (years), age bin have strong Collinearity. So I only remain the age(years)
-dat_learn <- cbind(dat_learn[, 3], dat_learn[, 5:7], dat_learn[, 10]) 
-names(dat_learn)[1:4]<-c("age", "gender", "height", "weight")
-
-## sampling 80% for training, 20% for test.
-ind <- sample(c(1,2), nrow(dat_learn), replace=T, prob = c(0.8, 0.2))
-## training data
-trainData <- dat_learn[ind == 1,]
-## test data
-testData <- dat_learn[ind == 2,]
-
-set.seed(500)
-ez.forest <- randomForest(z_category ~., data = trainData,
-                          na.action = na.roughfix,
-                          importance = TRUE)
-ez.forest
-importance(ez.forest,type=2)
-
-forest.pred <- predict(ez.forest, testData)
-forest.perf <- table(testData$z_category, forest.pred,
-                     dnn = c('Actual', 'Predicted'))
-forest.perf
-
-```
-
-
-```{r}
-########################################################
-## Predict Z-Score ~ age + gender (Long unbalanced panel data)
-##   Way1: predict the z_score at 18(18.5) year
-##   Way2: predict the unbalanced z_score
-## plm
-########################################################
-dat_unq <- dat_uc
-dat_unq$last_rs = rep(NA, times = nrow(dat_unq))
-bId <- 0
-z18 <- 0
-for (i in 1:nrow(dat_unq)) {
-  id <- dat_unq[i,1]$ID
-  if (id == bId) {
-    if (nrow(z18) != 0) {
-      dat_unq$last_rs[i] = z18$z_score
-    }
-  }
-  else {
-    z18 <- dat_unq[which(dat_unq$ID==id & dat_unq$new_age_bin == '18.5'), 'z_score']
-    if (nrow(z18) == 0) {
-      z18 <- dat_unq[which(dat_unq$ID==id & dat_unq$new_age_bin == '18'), 'z_score']
-    }
-    if (nrow(z18) != 0) {
-      dat_unq$last_rs[i] = z18$z_score
+    
+    if (ty == 0) {
+      p
     } else {
-      dat_unq$last_rs[i] = NA
-      z18$z_score <- NA
+      p  + facet_wrap(~gender)
     }
-    bId <- id
-  }
 }
-
-dat_Last <- dat_unq[which(is.na(dat_unq$last_rs) == FALSE ), ]
-
-fitPlm1 <- plm(z_score~ gender + new_age_bin, data=dat_unq, model = 'random', index=c("ID", "new_age_bin"))
-summary(fitPlm1)
-
-fitPlm2 <- plm(z_score~ gender + new_age_bin, data=dat_unq, model = "within", index=c("ID", "new_age_bin"))
-summary(fitPlm2)
-
-fitPlm3 <- plm(last_rs~ gender + z_score + new_age_bin, data=dat_Last, model = 'pooling', effect = "twoways", index=c("ID", "new_age_bin"))
-summary(fitPlm3)
 ```
+
+```{r}
+########################################################
+## z_category By age_bin
+##
+## Compare the proportion of z_category in 6-18 year-old by gender.
+########################################################
+# Compare all in the same graph
+showTrend(dat_u,0)
+# Seperate by gender
+showTrend(dat_u,1)
+```
+
+The show the proportion of healthy status from 6 to 18 year-old by gender 
+
+For Normal:
+
+  1. Over 60% of teenager are healthy(Normal).
+  
+  2. 6-9 year-old, the Normal(Boy) is near to Normal(Girl); 9-18 year-old the Normal(Girl) > Normal(Boy).
+  
+  3. 6-9 year-old for Normal(Boy) declined; 9-18 year-old Normal(Boy) increased. 
+  
+  4. 6-10 year-old for Normal(Girl) declined; 10-18 year-old Normal(Girl) increased. 
+
+For Severely thin and Thin:
+  
+  1. The proportion of Severely thin is the lowest and the boy is the same as girl around 0.2%.
+  
+  2. The proportion of Severely thin is the second lowest and the boy is the same as girl around 2%.
+
+For Obese:
+
+  1. 6-10 year-old, Obese increased
+  
+  2. 10-18 year-old Obese declined
+  
+  3. All the period, Obese(Boy) > Obese(Girl) 
+  
+For Overweight:
+  
+  1. 6-13 year-old, Overweight increased, Overweight(Girl) > Overweight(Boy).
+  
+  2. 13-14 year-old, Overweight(Boy) is near to Overweight(Girl).
+  
+  3. 14-18 year-old, Overweight declined, Overweight(Boy) > Overweight(Girl).
+  
+For Overweight and Obese'
+
+  1. For Boy:
+     a) 6-8 year-old, Overweight(Boy) increased > Obese(Boy) keep the same.
+     
+     b) 8-10 year-old, Overweight(Boy) increased < Obese(Boy) increased.
+     
+     c) 10-18 year-old, Overweight(Boy) declined > Obese(Boy) declined.
+  
+  2. For Girl:
+     
+     a) Overweight(Girl) > Obese(Girl).
+     
+     b) 6-10 year-old increased; 10-18 year-old declined.
+
+```{r}
+########################################################
+## Growth Curve Analysis (Height)
+##
+## Plot Height versus age_bin by gender  
+########################################################
+ggplot(dat_u, aes(x=age_bin, y=height, color=z_category)) + geom_point() + geom_smooth(method = "loess", se=FALSE) + facet_wrap(~gender)
+```
+The graph shows the plot height versus age_bin by gender.
+
+  1. The height(Boy) > height(Girl) in the same age_bin.
+  
+  2. 6-16 year-old, height grows fast.
+  
+  3. 17-18 year-old, height grows slowly.
+  
+  4. The height of Obese(Boy) > Overweight(Boy) > Normal(Boy) > Thin(Boy) > Serverely Thin(Boy).
+  
+  5. The height of Obese(Girl) > Overweight(Girl) > Normal(Girl) > Serverely Thin(Girl) > Thin(Girl).
+
+```{r}
+########################################################
+## Growth Curve Analysis (Height)
+##
+## fit the Height growth curve analysis(Girl)  
+########################################################
+## The growth curve for girl's height
+dat_u_girl <- dat_u[which(dat_u$gender=="girl"),]
+fh1 <- sitar(x = age_bin, y = height, id = ID, data = dat_u_girl, df=3, control = nlmeControl(msMaxIter = 500, maxIter = 1000, returnObject = TRUE))
+
+par(mar = c(4,4,1,1) + 0.1, cex = 0.8)
+mplot(x = age_bin, y = height, id = ID, data = dat_u_girl, col = ID, las = 1)
+plot(fh1, opt = 'a', col = ID, las = 1, xlim = xaxsd(), ylim = yaxsd())
+```
+
+The graph shows the Height growth curve analysis(Girl).
+
+  The height has two steps: 6-13 year-old grows fast, 14-18 year-old grows slowly.
+
+```{r}
+########################################################
+## Growth Curve Analysis (Height)
+##
+## fit the Height growth curve analysis(Boy)  
+########################################################
+## The growth curve for boy's height
+dat_u_boy <- dat_u[which(dat_u$gender=="boy"),]
+fh2 <- sitar(x = age_bin, y = height, id = ID, data = dat_u_boy, df=3, control = nlmeControl(msMaxIter = 500, maxIter = 1000, returnObject = TRUE))
+
+par(mar = c(4,4,1,1) + 0.1, cex = 0.8)
+mplot(x = age_bin, y = height, id = ID, data = dat_u_boy, col = ID, las = 1)
+plot(fh2, opt = 'a', col = ID, las = 1, xlim = xaxsd(), ylim = yaxsd())
+```
+
+The graph shows the Height growth curve analysis(Boy).
+
+  The height has two steps: 6-14 year-old grows fast, 15-18 year-old grows slowly.
 
 ```{r}
 
