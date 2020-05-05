@@ -1,7 +1,7 @@
 ---
-title: "ST606_W4"
+title: "ST606_W5"
 author: "YANG WANG"
-date: "2020/4/28"
+date: "2020/5/7"
 output: html_document
 ---
 
@@ -18,17 +18,18 @@ suppressMessages(library(GGally))
 suppressMessages(library(ggplot2))
 suppressMessages(library(scatterplot3d))
 suppressMessages(library(sitar))
+```
 
-########################################################
-## Clean Data
-##
-## Delete the data which height and weight = 'NA' (Invalid BMI data)
-########################################################
+## Clean Data:
+  1. Read the data from excel file.
+  2. Deleted the data that the height is NA.
+  3. Renamed the column name.
+  
+```{r}
 dat_ex_all <- read_excel("./SharedFiles/ST606/2020/data/Exercise/fit_database_anthropometric_all.xlsx", sheet=1, na='NA')
 
 # Clean data (delete all data that the follow conditions are NA)
-dat <- subset(dat_ex_all, `height (cm)` != 'NA' 
-                & `weight (kg)` != 'NA')
+dat <- subset(dat_ex_all, `height (cm)` != 'NA')
 # Change the date to year
 dat$mYear <- substr(as.character(dat$`measurement date`), start=1, stop=4)
 
@@ -41,220 +42,131 @@ colnames(dat)[4] <- 'age_bin'
 colnames(dat)[6] <- 'height'
 colnames(dat)[7] <- 'weight'
 
-# new age bin by 0.5 year
-dat$new_age_bin = as.factor(ifelse((dat$age - dat$age_bin)>= 0.5,dat$age_bin + 0.5 , dat$age_bin))
-
-# delete error data
-dat$indx <- paste(dat$ID, dat$new_age_bin, sep='||')
-index <- duplicated(dat[,13])
-dat_u <- dat[!index, 1:12]
-
-dat_u$ID = as.character(dat_u$ID)
+dat$ID = as.character(dat$ID)
 
 # check the deleted data
-dataSta <- data.frame(All = nrow(dat_ex_all), Object = nrow(dat_u), Deleted = nrow(dat_ex_all) - nrow(dat_u)) 
+dataSta <- data.frame(All = nrow(dat_ex_all), Object = nrow(dat), Deleted = nrow(dat_ex_all) - nrow(dat)) 
 dataSta
 ```
 
-1. Clean data
+## Background:
+The growth curve analysis is a statistical issue in life course. 
+Height in puberty involves a growth spurt, the timing and intensity of which varies between individuals.
 
-a) Deleted the rows which the column of height or the column of weight are NA.
+## Methods:
+I used the SuperImposition by Translation And Rotation (SITAR) model, a shape invariant model with a single fitted curve. Curves for individuals are matched to the mean curve by shifting their curve up–down (representing differences in mean size) and left–right (for differences in growth tempo), and the age scale is also shrunk or stretched to indicate how fast time passes in the individual (i.e. velocity). 
+These three parameters per individual are estimated as random effects while fitting the curve. 
+The outcome is a mean curve plus triplets of parameters per individual (size, tempo and velocity) that summarize the individual growth patterns.
 
-b) Deleted the invalid data(duplicated measure data)
+## DataSets:
+The data are heights for boy(31) and girl(38) at the stage between 2007 and 2018,
+and have the complete set of 22 observations between the ages of 6 and 18 years.
 
-c) All rows: 102642; deleted rows: 7968; Object rows:94674
-
+## The first dataset:
+  The 31 boys who has the complete set of 22 observations.
 ```{r}
-########################################################
-## Get the ratio
-##  data: input data
-##  gender: 0:Girl 1:Boy 2:All
-########################################################
-getRatio <- function(data, gender) {
-  pDataNor <- c()
-  pDataObe <- c()
-  pDataOver <- c()
-  pDataSThin <- c()
-  pDataThin <- c()
-  # Gender:All
-  if (gender == 2) {
-    # all 
-    for (value in 6:18) {
-      norPer <- nrow(data[which(data$z_category=="normal" & data$age_bin==value),])/nrow(data[which(data$age_bin==value),])
-      pDataNor <- c(pDataNor, norPer)
-
-      norObe <- nrow(data[which(data$z_category=="obese" & data$age_bin==value ),])/nrow(data[which(data$age_bin==value),])
-      pDataObe <- c(pDataObe, norObe)
-      
-      norOver <- nrow(data[which(data$z_category=="overweight" & data$age_bin==value ),])/nrow(data[which(data$age_bin==value),])
-      pDataOver <- c(pDataOver, norOver)
-      
-      norSThin <- nrow(data[which(data$z_category=="severely thin" & data$age_bin==value ),])/nrow(data[which(data$age_bin==value),])
-      pDataSThin <- c(pDataSThin, norSThin)
-      
-      norThin <- nrow(data[which(data$z_category=="thin" & data$age_bin==value ),])/nrow(data[which(data$age_bin==value),])
-      pDataThin <- c(pDataThin, norThin)
-    }
-    pData <- c(pDataNor, pDataObe, pDataOver, pDataSThin, pDataThin)
-    pData
-  } 
-  # Gender:Boy
-  else if (gender == 1) {
-    # boy
-    for (value in 6:18) {
-      norPer <- nrow(data[which(data$z_category=="normal" & data$age_bin==value & data$gender=='boy'),])/nrow(data[which(data$age_bin==value & data$gender=='boy'),])
-      pDataNor <- c(pDataNor, norPer)
-
-      norObe <- nrow(data[which(data$z_category=="obese" & data$age_bin==value & data$gender=='boy' ),])/nrow(data[which(data$age_bin==value & data$gender=='boy'),])
-      pDataObe <- c(pDataObe, norObe)
-      
-      norOver <- nrow(data[which(data$z_category=="overweight" & data$age_bin==value & data$gender=='boy' ),])/nrow(data[which(data$age_bin==value & data$gender=='boy'),])
-      pDataOver <- c(pDataOver, norOver)
-      
-      norSThin <- nrow(data[which(data$z_category=="severely thin" & data$age_bin==value & data$gender=='boy' ),])/nrow(data[which(data$age_bin==value & data$gender=='boy'),])
-      pDataSThin <- c(pDataSThin, norSThin)
-      
-      norThin <- nrow(data[which(data$z_category=="thin" & data$age_bin==value & data$gender=='boy' ),])/nrow(data[which(data$age_bin==value & data$gender=='boy'),])
-      pDataThin <- c(pDataThin, norThin)
-    }
-    pData <- c(pDataNor, pDataObe, pDataOver, pDataSThin, pDataThin)
-    pData
-  } 
-  # Gender:Girl
-  else if (gender == 0) {
-  # girl
-    for (value in 6:18) {
-      norPer <- nrow(data[which(data$z_category=="normal" & data$age_bin==value & data$gender=='girl'),])/nrow(data[which(data$age_bin==value & data$gender=='girl'),])
-      pDataNor <- c(pDataNor, norPer)
-
-      norObe <- nrow(data[which(data$z_category=="obese" & data$age_bin==value & data$gender=='girl' ),])/nrow(data[which(data$age_bin==value & data$gender=='girl'),])
-      pDataObe <- c(pDataObe, norObe)
-      
-      norOver <- nrow(data[which(data$z_category=="overweight" & data$age_bin==value & data$gender=='girl' ),])/nrow(data[which(data$age_bin==value & data$gender=='girl'),])
-      pDataOver <- c(pDataOver, norOver)
-      
-      norSThin <- nrow(data[which(data$z_category=="severely thin" & data$age_bin==value & data$gender=='girl' ),])/nrow(data[which(data$age_bin==value & data$gender=='girl'),])
-      pDataSThin <- c(pDataSThin, norSThin)
-      
-      norThin <- nrow(data[which(data$z_category=="thin" & data$age_bin==value & data$gender=='girl' ),])/nrow(data[which(data$age_bin==value & data$gender=='girl'),])
-      pDataThin <- c(pDataThin, norThin)
-    }
-    pData <- c(pDataNor, pDataObe, pDataOver, pDataSThin, pDataThin)
-    pData
-  }
-}
-########################################################
-## Show trend chart
-##  data: input data
-########################################################
-showTrend <- function(data, ty) {
-    title <- 'The proportion of z_category in 6~18 year-old'
-    Age <- rep(6:18, times = 10)
-    
-    typeB <- rep(c('Normal(Boy)','Obese(Boy)','Overweight(Boy)','Severely thin(Boy)', 'Thin(Boy)'), each = 13)
-    typeG <- rep(c('Normal(Girl)','Obese(Girl)','Overweight(Girl)','Severely thin(Girl)', 'Thin(Girl)'), each = 13)
-    type <- c(typeB, typeG)
-    
-    ProportionB <- getRatio(data, 1)
-    ProportionG <- getRatio(data, 0)
-    Proportion <- c(ProportionB, ProportionG)
-    
-    genderB <- rep('Boy', times = 65)
-    genderG <- rep('Girl', times = 65)
-    gender <- c(genderB, genderG)
-    
-    df <- data.frame(Age = Age, type = type, proportion = Proportion, gender=gender)
-    p <- ggplot(data = df, mapping = aes(x = Age, y = Proportion, colour = type)) + geom_line() +
-        ggtitle(title)
-    
-    if (ty == 0) {
-      p
-    } else {
-      p  + facet_wrap(~gender)
-    }
-}
+# The boy who has the complete set of 22 observations
+data_f_boys <- filter(dat, gender=="boy")
+boyID <- data_f_boys %>% group_by(ID) %>% 
+  summarise(nid = n())  %>% filter(nid == 22) %>% pull(ID)
+data_f_boys <- filter(data_f_boys, ID %in% boyID)
+ggplot(data_f_boys, aes(x=age, y=height, color=ID))  + geom_line() + facet_wrap(~ID)
+ggplot(data_f_boys, aes(x=age, y=height, color=ID)) + geom_line()
 ```
 
-```{r}
-########################################################
-## z_category By age_bin
-##
-## Compare the proportion of z_category in 6-18 year-old by gender.
-########################################################
-# Compare all in the same graph
-showTrend(dat_u,0)
-# Seperate by gender
-showTrend(dat_u,1)
-```
+## The SITAR model:
+The method used to summarize the individual growth curves.
+This is a shape invariant model that involves fitting the following random effects model to the set of height growth curves.
+![unchanged image](formula.gif)
 
-The show the proportion of healthy status from 6 to 18 year-old by gender 
+where yit is height for subject i at age t, h(t) is a natural cubic spline curve of height vs age, 
+and αi, βi and γi are subject-specific random effects. 
+The aim is to choose the values of αi, βi and γi to make the individual growth curves as similar as possible.
 
-For Normal:
+  1. αi is a random height intercept that adjusts for differences in mean height—here it is termed size.
+  Geometrically it can be thought of as a subject-specific shift up or down or translation in the spline curve, with αi smaller for shorter children.
+  
+  2. βi is a random age intercept to adjust for differences in the timing of the pubertal growth spurt in individuals, and it is here called tempo.
+  Geometrically it corresponds to a subject-specific left–right shift or translation in the spline curve, with βi negative for early puberty and positive for late.
+  
+  3. γi is a random age scaling that adjusts for the duration of the growth spurt in individuals. Its parameterization as exp(–γi) ensures that both positive and negative values are permissible, with zero corresponding to average velocity, and the minus sign means that it measures velocity rather than its inverse.
+  Geometrically it corresponds to a shrinking or stretching of the age scale. Thus for a child with a relatively short spurt and a steep growth curve, γi is positive to stretch the age scale and reduce the slope (i.e. peak velocity). Conversely, if γi is negative the age scale is shrunk and the curve slope increased. For this reason the parameter is termed velocity.
 
-  1. Over 60% of teenager are healthy(Normal).
-  
-  2. 6-9 year-old, the Normal(Boy) is near to Normal(Girl); 9-18 year-old the Normal(Girl) > Normal(Boy).
-  
-  3. 6-9 year-old for Normal(Boy) declined; 9-18 year-old Normal(Boy) increased. 
-  
-  4. 6-10 year-old for Normal(Girl) declined; 10-18 year-old Normal(Girl) increased. 
-
-For Severely thin and Thin:
-  
-  1. The proportion of Severely thin is the lowest and the boy is the same as girl around 0.2%.
-  
-  2. The proportion of Severely thin is the second lowest and the boy is the same as girl around 2%.
-
-For Obese:
-
-  1. 6-10 year-old, Obese increased
-  
-  2. 10-18 year-old Obese declined
-  
-  3. All the period, Obese(Boy) > Obese(Girl) 
-  
-For Overweight:
-  
-  1. 6-13 year-old, Overweight increased, Overweight(Girl) > Overweight(Boy).
-  
-  2. 13-14 year-old, Overweight(Boy) is near to Overweight(Girl).
-  
-  3. 14-18 year-old, Overweight declined, Overweight(Boy) > Overweight(Girl).
-  
-For Overweight and Obese'
-
-  1. For Boy:
-     a) 6-8 year-old, Overweight(Boy) increased > Obese(Boy) keep the same.
-     
-     b) 8-10 year-old, Overweight(Boy) increased < Obese(Boy) increased.
-     
-     c) 10-18 year-old, Overweight(Boy) declined > Obese(Boy) declined.
-  
-  2. For Girl:
-     
-     a) Overweight(Girl) > Obese(Girl).
-     
-     b) 6-10 year-old increased; 10-18 year-old declined.
+## Find the best the degrees of freedom (By BIC) before fit the model
+   The degrees of freedom (DF) indicate the number of independent values 
+   that can vary in an analysis without breaking any constraints.
 
 ```{r}
-########################################################
-## Growth Curve Analysis (Height)
-##
-## Plot Height versus age_bin by gender  
-########################################################
-ggplot(dat_u, aes(x=age_bin, y=height, color=z_category)) + geom_point() + geom_smooth(method = "loess", se=FALSE) + facet_wrap(~gender)
+## find the best degree freedom
+bestDf <- dfset(x = age, y = height, data = data_f_boys, FUN = BIC, df = 1:10, plot = TRUE)
 ```
-The graph shows the plot height versus age_bin by gender.
 
-  1. The height(Boy) > height(Girl) in the same age_bin.
+When Df = 4, the BIC is the lowest, choose the df = 4 for fitting model
+
+## Fit boy's data height versus age (df = 4)
+   Draw fitted distance and velocity curves
+
+```{r}
+## The growth curve for boy's height
+fitHB <- sitar(x = age, y = height, id = ID, data = data_f_boys, df= bestDf[1])
+
+#Options: 
+# ’d’:fitted Distance curve
+# ’v’:fitted Velocity curve
+# ’e’:fitted fixed Effects distance curve
+# ’D’:individual fitted Distance curves
+# ’V’:individual fitted Velocity curves
+# ’u’:Unadjusted individual growth curves
+# ’a’:Adjusted individual growth curves
+
+## draw fitted distance and velocity curves with velocity curve in blue
+plot(fitHB, y2par=list(col='blue'), apv=TRUE)
+```
+
+The distance curve(solid black line) (left y axis) indicates the amount of height achieved at a given age.
+
+The velocity curve(dashed blue line) (right y axis) indicates the rate of growth at a given age.
+
+1. The growth rate:
+   The boys grow fast between 6~15 year-old, grow slowly after 15 year-old.
+   
+2. The growth velocity:
+   a) It reached the peak of 9.685 at the age of 13.42.
+   b) It is relatively constant between 6~9 year-old.
+   c) It declined slowly between 9~11 year-old.
+   d) It increased rapidly between 11~13.42 year-old.
+   e) It declined rapidly between 13.42~17 year-old.
+   f) It is relatively constant after 17 year-old.
+
+```{r}
+## fit sitar model for height
+mb1 <- sitar(x=age, y=height, id=ID, data=data_f_boys, df=bestDf[1])
+
+summary(mb1) 
+
+```
+
+The model(Age versus Heght) has the lowest BIC, choose the model.
+
+```{r}
+mplot(x = age, y = height, id = ID, data = data_f_boys, col = ID, las = 1)
+plot(mb1, opt = 'a', col = ID, las = 1, xlim = xaxsd(), ylim = yaxsd())
+```
+
+## The second dataset:
+  The 38 girls who has the complete set of 22 observations.
   
-  2. 6-16 year-old, height grows fast.
-  
-  3. 17-18 year-old, height grows slowly.
-  
-  4. The height of Obese(Boy) > Overweight(Boy) > Normal(Boy) > Thin(Boy) > Serverely Thin(Boy).
-  
-  5. The height of Obese(Girl) > Overweight(Girl) > Normal(Girl) > Serverely Thin(Girl) > Thin(Girl).
+```{r}
+# The girl who has the complete set of 22 observations
+data_f_girl <- filter(dat, gender=="girl")
+# The girl who has 22 records
+girlID <- data_f_girl %>% group_by(ID) %>% 
+  summarise(nid = n())  %>% filter(nid == 22) %>% pull(ID)
+data_f_girl <- filter(data_f_girl, ID %in% girlID)
+
+ggplot(data_f_girl, aes(x=age, y=height, color=ID))  + geom_line() + facet_wrap(~ID)
+ggplot(data_f_girl, aes(x=age, y=height, color=ID)) + geom_line()
+```
 
 ```{r}
 ########################################################
@@ -262,37 +174,24 @@ The graph shows the plot height versus age_bin by gender.
 ##
 ## fit the Height growth curve analysis(Girl)  
 ########################################################
-## The growth curve for girl's height
-dat_u_girl <- dat_u[which(dat_u$gender=="girl"),]
-fh1 <- sitar(x = age_bin, y = height, id = ID, data = dat_u_girl, df=3, control = nlmeControl(msMaxIter = 500, maxIter = 1000, returnObject = TRUE))
 
-par(mar = c(4,4,1,1) + 0.1, cex = 0.8)
-mplot(x = age_bin, y = height, id = ID, data = dat_u_girl, col = ID, las = 1)
-plot(fh1, opt = 'a', col = ID, las = 1, xlim = xaxsd(), ylim = yaxsd())
+
+ggplot(data_f_girl, aes(x=age, y=height, color=ID)) + geom_point() + geom_smooth(formula = "y~x", method = "loess", se=FALSE) + facet_wrap(~ID)
+
+
+bestDf <- dfset(x = age, y = height, data = data_f_boys, FUN = BIC, df = 1:10, plot = TRUE)
+
+## The growth curve for girl's height
+fitHG <- sitar(x = age, y = height, id = ID, data = data_f_girl, df=bestDf[1], control = nlmeControl(msMaxIter = 500, maxIter = 1000, returnObject = TRUE))
+
+mplot(x = age_bin, y = height, id = ID, data = data_f_girl, col = ID, las = 1)
+plot(fitHG, opt = 'a', col = ID, las = 1, xlim = xaxsd(), ylim = yaxsd())
 ```
 
 The graph shows the Height growth curve analysis(Girl).
 
   The height has two steps: 6-13 year-old grows fast, 14-18 year-old grows slowly.
 
-```{r}
-########################################################
-## Growth Curve Analysis (Height)
-##
-## fit the Height growth curve analysis(Boy)  
-########################################################
-## The growth curve for boy's height
-dat_u_boy <- dat_u[which(dat_u$gender=="boy"),]
-fh2 <- sitar(x = age_bin, y = height, id = ID, data = dat_u_boy, df=3, control = nlmeControl(msMaxIter = 500, maxIter = 1000, returnObject = TRUE))
-
-par(mar = c(4,4,1,1) + 0.1, cex = 0.8)
-mplot(x = age_bin, y = height, id = ID, data = dat_u_boy, col = ID, las = 1)
-plot(fh2, opt = 'a', col = ID, las = 1, xlim = xaxsd(), ylim = yaxsd())
-```
-
-The graph shows the Height growth curve analysis(Boy).
-
-  The height has two steps: 6-14 year-old grows fast, 15-18 year-old grows slowly.
 
 ```{r}
 
