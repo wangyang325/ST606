@@ -92,12 +92,12 @@ The aim is to choose the values of αi, βi and γi to make the individual growt
   3. γi is a random age scaling that adjusts for the duration of the growth spurt in individuals. Its parameterization as exp(–γi) ensures that both positive and negative values are permissible, with zero corresponding to average velocity, and the minus sign means that it measures velocity rather than its inverse.
   Geometrically it corresponds to a shrinking or stretching of the age scale. Thus for a child with a relatively short spurt and a steep growth curve, γi is positive to stretch the age scale and reduce the slope (i.e. peak velocity). Conversely, if γi is negative the age scale is shrunk and the curve slope increased. For this reason the parameter is termed velocity.
 
-## Find the best the degrees of freedom (By BIC) before fit the model
+## Find the best the degrees of freedom (By BIC) for boy dataset before fit the model
    The degrees of freedom (DF) indicate the number of independent values 
    that can vary in an analysis without breaking any constraints.
 
 ```{r}
-## find the best degree freedom
+## find the best degree freedom for boy
 bestDf <- dfset(x = age, y = height, data = data_f_boys, FUN = BIC, df = 1:10, plot = TRUE)
 ```
 
@@ -139,19 +139,53 @@ The velocity curve(dashed blue line) (right y axis) indicates the rate of growth
    f) It is relatively constant after 17 year-old.
 
 ```{r}
-## fit sitar model for height
-mb1 <- sitar(x=age, y=height, id=ID, data=data_f_boys, df=bestDf[1])
-
-summary(mb1) 
-
+summary(fitHB)
 ```
 
-The model(Age versus Heght) has the lowest BIC, choose the model.
+The fixed effect s1, s2, s3, s4 are singificant.(p-value < 0.05).
+The random effect of α(a) and γ(c) are singificant.(p-value < 0.05).
+The random effect of β(b) is not significant(p-value > 0.05).
+
+## Compare the random effect (α(a) + β(b) + γ(c))
+   Increase each random effect SITAR parameter in model, figure out the parameters how to effect the model 
 
 ```{r}
+mba <- sitar(x=age, y=height, id=ID, data=data_f_boys, df=bestDf[1], random = 'a')
+mbab <- sitar(x=age, y=height, id=ID, data=data_f_boys, df=bestDf[1], random = 'a+b')
+
 mplot(x = age, y = height, id = ID, data = data_f_boys, col = ID, las = 1)
-plot(mb1, opt = 'a', col = ID, las = 1, xlim = xaxsd(), ylim = yaxsd())
+title("Plot the raw data of boy")
+
+plot(mba, opt = 'a', col = ID, las = 1, xlim = xaxsd(), ylim = yaxsd()) 
+title("(a) Random Effect by α(a)")
+#summary(mba)
+
+plot(mbab, opt = 'a', col = ID, las = 1, xlim = xaxsd(), ylim = yaxsd()) 
+title("(b) Random Effect by α(a) + β(b)")
+#summary(mbab)
+
+plot(fitHB, opt = 'a', col = ID, las = 1, xlim = xaxsd(), ylim = yaxsd()) 
+title("(c) Random Effect by α(a) + β(b) + γ(c)")
+
+plot(fitHB, opt='d', lwd=2, abc=diag(getVarCov(fitHB)))
+title("(d) Growth Curve with Random Effect by α(a) + β(b) + γ(c)")
+#summary(fitHB)
+
+compareTb <- data.frame(Random_Effect=c('a','a+b','a+b+c'), StdDev_a=c(6.420392,6.687787,5.6277265), StdDev_b=c(NA, 1.930551,0.8699125), StdDev_c=c(NA, NA, 0.1200788), Residual=c(2.769071, 1.930551, 1.2995116), AIC=c(3486.906, 3136.703,2718.42), BIC=c(3518.581, 3181.953,2781.771))
+compareTb
 ```
+
+(a) fit the model only with a random effect α(a).
+
+(b) fit the model with a random effect α(a) + β(b).
+    
+    The Residual reduced 0.83852 and the AIC reduced 350.203.
+    
+(c) fit the model with a random effect α(a) + β(b) + γ(c).
+    
+    The Residual reduced 0.631039 and the AIC reduced 418.283.
+    
+   so the model with all random effects is best. 
 
 ## The second dataset:
   The 38 girls who has the complete set of 22 observations.
@@ -168,30 +202,96 @@ ggplot(data_f_girl, aes(x=age, y=height, color=ID))  + geom_line() + facet_wrap(
 ggplot(data_f_girl, aes(x=age, y=height, color=ID)) + geom_line()
 ```
 
+## Find the best the degrees of freedom (By BIC) for girl dataset before fit the model
+   The degrees of freedom (DF) indicate the number of independent values 
+   that can vary in an analysis without breaking any constraints.
+
 ```{r}
-########################################################
-## Growth Curve Analysis (Height)
-##
-## fit the Height growth curve analysis(Girl)  
-########################################################
-
-
-ggplot(data_f_girl, aes(x=age, y=height, color=ID)) + geom_point() + geom_smooth(formula = "y~x", method = "loess", se=FALSE) + facet_wrap(~ID)
-
-
-bestDf <- dfset(x = age, y = height, data = data_f_boys, FUN = BIC, df = 1:10, plot = TRUE)
-
-## The growth curve for girl's height
-fitHG <- sitar(x = age, y = height, id = ID, data = data_f_girl, df=bestDf[1], control = nlmeControl(msMaxIter = 500, maxIter = 1000, returnObject = TRUE))
-
-mplot(x = age_bin, y = height, id = ID, data = data_f_girl, col = ID, las = 1)
-plot(fitHG, opt = 'a', col = ID, las = 1, xlim = xaxsd(), ylim = yaxsd())
+## find the best degree freedom for girl
+bestDfG <- dfset(x = age, y = height, data = data_f_girl, FUN = BIC, df = 1:10, plot = TRUE)
 ```
 
-The graph shows the Height growth curve analysis(Girl).
+When Df = 4, the BIC is the lowest, choose the df = 4 for fitting model
 
-  The height has two steps: 6-13 year-old grows fast, 14-18 year-old grows slowly.
+## Fit girl's data height versus age (df = 4)
+   Draw fitted distance and velocity curves
 
+```{r}
+## The growth curve for boy's height
+fitHG <- sitar(x = age, y = height, id = ID, data = data_f_girl, df= bestDfG[1])
+
+#Options: 
+# ’d’:fitted Distance curve
+# ’v’:fitted Velocity curve
+# ’e’:fitted fixed Effects distance curve
+# ’D’:individual fitted Distance curves
+# ’V’:individual fitted Velocity curves
+# ’u’:Unadjusted individual growth curves
+# ’a’:Adjusted individual growth curves
+
+## draw fitted distance and velocity curves with velocity curve in blue
+plot(fitHG, y2par=list(col='blue'), apv=TRUE)
+```
+
+The distance curve(solid black line) (left y axis) indicates the amount of height achieved at a given age.
+
+The velocity curve(dashed blue line) (right y axis) indicates the rate of growth at a given age.
+
+1. The growth rate:
+   The girls grow fast between 6~14 year-old, grow slowly after 14 year-old.
+   
+2. The growth velocity:
+   a) It reached the peak of 7.052 at the age of 11.38.
+   b) It is relatively constant between 6~9 year-old.
+   c) It increased rapidly between 9~11.38 year-old.
+   d) It declined rapidly between 11.38~16 year-old.
+   e) It is relatively constant after 16 year-old.
+
+
+```{r}
+summary(fitHG)
+```
+
+## Compare the random effect (α(a) + β(b) + γ(c))
+   Increase each random effect SITAR parameter in model, figure out the parameters how to effect the model 
+
+```{r}
+mga <- sitar(x=age, y=height, id=ID, data=data_f_girl, df=bestDf[1], random = 'a', control = nlmeControl(returnObject = TRUE, pnlsTol = 12))
+mgab <- sitar(x=age, y=height, id=ID, data=data_f_girl, df=bestDf[1], random = 'a+b')
+
+mplot(x = age, y = height, id = ID, data = data_f_girl, col = ID, las = 1)
+title("Plot the raw data of girl")
+
+plot(mga, opt = 'a', col = ID, las = 1, xlim = xaxsd(), ylim = yaxsd()) 
+title("(a) Random Effect by α(a)")
+#summary(mga)
+
+plot(mgab, opt = 'a', col = ID, las = 1, xlim = xaxsd(), ylim = yaxsd()) 
+title("(b) Random Effect by α(a) + β(b)")
+#summary(mgab)
+
+plot(fitHG, opt = 'a', col = ID, las = 1, xlim = xaxsd(), ylim = yaxsd()) 
+title("(c) Random Effect by α(a) + β(b) + γ(c)")
+
+plot(fitHG, opt='d', lwd=2, abc=diag(getVarCov(fitHG)))
+title("(d) Growth Curve with Random Effect by α(a) + β(b) + γ(c)")
+#summary(fitHG)
+
+compareTg <- data.frame(Random_Effect=c('a','a+b','a+b+c'), StdDev_a=c(6.236859,6.7423376,6.4553518), StdDev_b=c(NA, 0.7403941,0.8158632), StdDev_c=c(NA, NA, 0.1180221), Residual=c(2.308716, 1.4490265, 1.0985996), AIC=c(3978.637, 3376.986,3035.635), BIC=c(4011.737, 3424.272,3101.836))
+compareTg
+```
+
+(a) fit the model only with a random effect α(a).
+
+(b) fit the model with a random effect α(a) + β(b).
+    
+    The Residual reduced 0.85969 and the AIC reduced 601.651.
+    
+(c) fit the model with a random effect α(a) + β(b) + γ(c).
+    
+    The Residual reduced 0.350426 and the AIC reduced 341.348,.
+    
+    so the model with all random effects is best. 
 
 ```{r}
 
