@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r echo= F}
 suppressMessages(library(readxl))
 suppressMessages(library(plotly))
 suppressMessages(library(dplyr))
@@ -18,12 +18,40 @@ suppressMessages(library(ggplot2))
 suppressMessages(library(sitar))
 ```
 
-## Clean Data:
+## Background
+The growth curve analysis is a statistical issue in life course. 
+Height in puberty involves a growth spurt, the timing and intensity of which varies between individuals.
+
+## Methods
+I used the SuperImposition by Translation And Rotation (SITAR) model, a shape invariant model with a single fitted curve. Curves for individuals are matched to the mean curve by shifting their curve up–down (representing differences in mean size) and left–right (for differences in growth tempo), and the age scale is also shrunk or stretched to indicate how fast time passes in the individual (i.e. velocity). 
+These three parameters per individual are estimated as random effects while fitting the curve. 
+The outcome is a mean curve plus triplets of parameters per individual (size, tempo and velocity) that summarize the individual growth patterns.
+
+## The SITAR model
+The method used to summarize the individual growth curves.
+This is a shape invariant model that involves fitting the following random effects model to the set of height growth curves.
+![unchanged image](formula.gif)
+
+where yit is height for subject i at age t, h(t) is a natural cubic spline curve of height vs age, 
+and αi, βi and γi are subject-specific random effects. 
+The aim is to choose the values of αi, βi and γi to make the individual growth curves as similar as possible.
+
+  1. αi is a random height intercept that adjusts for differences in mean height—here it is termed size.
+  Geometrically it can be thought of as a subject-specific shift up or down or translation in the spline curve, with αi smaller for shorter children.
+  
+  2. βi is a random age intercept to adjust for differences in the timing of the pubertal growth spurt in individuals, and it is here called tempo.
+  Geometrically it corresponds to a subject-specific left–right shift or translation in the spline curve, with βi negative for early puberty and positive for late.
+  
+  3. γi is a random age scaling that adjusts for the duration of the growth spurt in individuals. Its parameterization as exp(–γi) ensures that both positive and negative values are permissible, with zero corresponding to average velocity, and the minus sign means that it measures velocity rather than its inverse. 
+  
+Geometrically it corresponds to a shrinking or stretching of the age scale. Thus for a child with a relatively short spurt and a steep growth curve, γi is positive to stretch the age scale and reduce the slope (i.e. peak velocity). Conversely, if γi is negative the age scale is shrunk and the curve slope increased. For this reason the parameter is termed velocity.
+
+## Clean Data
   1. Read the data from excel file.
   2. Delete the data that the height is NA.
   3. Rename the column name.
   
-```{r}
+```{r echo= F}
 # Read data from file
 dat_ex_all <- read_excel("./SharedFiles/ST606/2020/data/Exercise/fit_database_anthropometric_all.xlsx", sheet=1, na='NA')
 
@@ -47,41 +75,14 @@ dataSta <- data.frame(All = nrow(dat_ex_all), Object = nrow(dat), Deleted = nrow
 dataSta
 ```
 
-## Background:
-The growth curve analysis is a statistical issue in life course. 
-Height in puberty involves a growth spurt, the timing and intensity of which varies between individuals.
+## The DataSets
+   The datasets are heights for boy(31) and girl(38) at the stage between 2007 and 2018 (6-18 year-old),
+   and have the complete set of 22 observations between the ages of 6 and 18 years.
 
-## Methods:
-I used the SuperImposition by Translation And Rotation (SITAR) model, a shape invariant model with a single fitted curve. Curves for individuals are matched to the mean curve by shifting their curve up–down (representing differences in mean size) and left–right (for differences in growth tempo), and the age scale is also shrunk or stretched to indicate how fast time passes in the individual (i.e. velocity). 
-These three parameters per individual are estimated as random effects while fitting the curve. 
-The outcome is a mean curve plus triplets of parameters per individual (size, tempo and velocity) that summarize the individual growth patterns.
-
-## The SITAR model:
-The method used to summarize the individual growth curves.
-This is a shape invariant model that involves fitting the following random effects model to the set of height growth curves.
-![unchanged image](formula.gif)
-
-where yit is height for subject i at age t, h(t) is a natural cubic spline curve of height vs age, 
-and αi, βi and γi are subject-specific random effects. 
-The aim is to choose the values of αi, βi and γi to make the individual growth curves as similar as possible.
-
-  1. αi is a random height intercept that adjusts for differences in mean height—here it is termed size.
-  Geometrically it can be thought of as a subject-specific shift up or down or translation in the spline curve, with αi smaller for shorter children.
+## The first dataset(Boys)
+   The 31 boys who have the complete set of 22 observations.
   
-  2. βi is a random age intercept to adjust for differences in the timing of the pubertal growth spurt in individuals, and it is here called tempo.
-  Geometrically it corresponds to a subject-specific left–right shift or translation in the spline curve, with βi negative for early puberty and positive for late.
-  
-  3. γi is a random age scaling that adjusts for the duration of the growth spurt in individuals. Its parameterization as exp(–γi) ensures that both positive and negative values are permissible, with zero corresponding to average velocity, and the minus sign means that it measures velocity rather than its inverse. 
-  
-Geometrically it corresponds to a shrinking or stretching of the age scale. Thus for a child with a relatively short spurt and a steep growth curve, γi is positive to stretch the age scale and reduce the slope (i.e. peak velocity). Conversely, if γi is negative the age scale is shrunk and the curve slope increased. For this reason the parameter is termed velocity.
-
-## DataSets:
-The datasets are heights for boy(31) and girl(38) at the stage between 2007 and 2018 (6-18 year-old),
-and have the complete set of 22 observations between the ages of 6 and 18 years.
-
-## The first dataset:
-  The 31 boys who has the complete set of 22 observations.
-```{r}
+```{r echo= F}
 # The boy who has the complete set of 22 observations
 data_f_boys <- filter(dat, gender=="boy")
 boyID <- data_f_boys %>% group_by(ID) %>% 
@@ -91,11 +92,20 @@ data_f_boys <- filter(data_f_boys, ID %in% boyID)
 ggplot(data_f_boys, aes(x=age, y=height, color=ID)) + geom_line()
 ```
 
-## Find the best the degrees of freedom (By BIC) for boy dataset before fit the model
+## Fit the data to find the best model
+   model 1: height~age
+   
+   model 2: log(height)~age
+   
+   model 3: height~log(age)
+   
+   model 4: log(height)~log(age)
+
+## Find the the degrees of freedom (By BIC)
    The degrees of freedom (DF) indicate the number of independent values 
    that can vary in an analysis without breaking any constraints.
 
-```{r}
+```{r echo= F}
 ## find the best degree freedom for boy
 par(mfrow=c(2,2), cex=1.1)
 bestDf <- dfset(x = age, y = height, data = data_f_boys, FUN = BIC, df = 1:10, plot = TRUE, main="height~age (Boy)")
@@ -104,12 +114,12 @@ bestDf2 <- dfset(x = log(age), y = height, data = data_f_boys, FUN = BIC, df = 1
 bestDf3 <- dfset(x = log(age), y = log(height), data = data_f_boys, FUN = BIC, df = 1:10, plot = TRUE, main="log(height)~log(age) (Boy)")
 ```
 
-When Df = 4, the BIC is the lowest, choose the df = 4 for the fitting model
+When Df = 4, the BICs are the lowest, choose the df = 4 for the four models.
 
-## Fit the boy's data
-   Draw fitted distance and velocity curves
+## Fit the models by using sitar model
+   fit the four models and compare the variance, residual and AIC to find the best model.
 
-```{r}
+```{r echo= F}
 ## The growth curve for boy's height
 fitHB <- sitar(x = age, y = height, id = ID, data = data_f_boys, df= bestDf[1])
 #summary(fitHB)
@@ -123,30 +133,32 @@ fitHB3 <- sitar(x = log(age), y = log(height), id = ID, data = data_f_boys, df= 
 data.frame(formula=c('height~age','log(height)~age','height~log(age)','log(height)~log(age)'), variance=c('96.56','96.47','96.45','96.41'), residual=c('1.2995116','0.00854324','1.31863340','0.008600255'), AIC=c('2718.42','-4139.344','2735.403','-4131.781'), Converge=c('True','false','True','True'))
 ```
 
-The log(height)~log(age) is the best fitted model.
+Although, the log(height)~age model is the best, however, it has convergence error.
+So I chose the log(height)~log(age) model.
 
-```{r}
-## draw fitted distance and velocity curves with velocity curve in blue
+## The distance and velocity curves
+   Distance curve(left y axis)(Black solid line): the amount of height achieved at a given age.
+   
+   Velocity curve(right y axis)(Blue dash line): the rate of growth at a given age.
+   
+```{r echo= F}
 suppressMessages(plot(fitHB3, y2par=list(col='blue'), apv=TRUE))
 ```
 
-The distance curve(solid black line) (left y axis) indicates the amount of height achieved at a given age.
-
-The velocity curve(dashed blue line) (right y axis) indicates the rate of growth at a given age.
-
 1. The growth rate:
 
-   The boys grow fast between 6~15 year-old, grow slowly after 15 year-old.
+   The boys grow fast between 6~16 year-old, grow slowly after 16 year-old.
    
 2. The growth velocity:
    a) It reached the peak of 9.685 at the age of 13.42.
-   b) It is relatively constant between 6~9 year-old.
-   c) It declined slowly between 9~11 year-old.
+   b) It declined slowly between 6~11 year-old.
    d) It increased rapidly between 11~13.42 year-old.
    e) It declined rapidly between 13.42~17 year-old.
    f) It is relatively constant after 17 year-old.
 
-```{r}
+## Check the significant of fixed and random effect factors
+
+```{r echo= F}
 anova(fitHB3)
 ```
 
@@ -159,13 +171,12 @@ The random effect of β(b) is not significant(p-value > 0.05).
 ## Compare the random effect (α(a) + β(b) + γ(c))
    Increase each random effect SITAR parameter in model, figure out the parameters how to effect the model 
 
-```{r}
+```{r echo= F}
 # All
 suppressMessages(ggplot(plot_D(fitHB3), aes(.x, .y, colour=.id)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("The growth curve for each boy"))
 ```
 
-
-```{r}
+```{r echo= F}
 # Random Effect by α(a)
 mba <- sitar(x=log(age), y=log(height), id=ID, data=data_f_boys, df=bestDf3[1], random = 'a')
 suppressMessages(ggplot(plot_a(mba), aes(.x, .y, colour=.id)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(a) Random Effect by α(a)"))
@@ -175,7 +186,7 @@ resultA <- data.frame(Type=c('Random Effect by a'), variance=varexp(mba), residu
 resultA
 ```
 
-```{r}
+```{r echo= F}
 # Random Effect by α(a) + β(b)
 mbab <- sitar(x=log(age), y=log(height), id=ID, data=data_f_boys, df=bestDf3[1], random = 'a+b')
 suppressMessages(ggplot(plot_a(mbab), aes(.x, .y, colour=.id)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(b) Random Effect by α(a) + β(b)"))
@@ -185,7 +196,7 @@ resultB <- data.frame(Type=c('Random Effect by a + b'), variance=varexp(mbab), r
 resultB
 ```
 
-```{r}
+```{r echo= F}
 # Random Effect by α(a) + β(b) + γ(c)
 suppressMessages(ggplot(plot_a(fitHB3), aes(.x, .y, colour=.id)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(c) Random Effect by α(a) + β(b) + (c)"))
 #summary(fitHB3)
@@ -194,21 +205,23 @@ resultC <- data.frame(Type=c('Random Effect by a + b + c'), variance=varexp(fitH
 resultC
 ```
 
-```{r}
+```{r echo= F}
 resultAB <- merge(resultA, resultB, all=T)
 merge(resultAB, resultC, all=T)
+```
 
+The model with all random effects is best. 
+
+```{r echo= F}
 # Growth Curve with Random Effect by α(a) + β(b) + γ(c)
 suppressMessages(ggplot(plot_d(fitHB3), aes(.x, .y)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(d) Growth Curve with Random Effect by α(a) + β(b) + (c)"))
 #summary(fitHB3)
 ```
 
-The model with all random effects is best. 
-
-## The second dataset:
-  The 38 girls who has the complete set of 22 observations.
+## The second dataset(Girls)
+  The 38 girls who have the complete set of 22 observations.
   
-```{r}
+```{r echo= F}
 # The girl who has the complete set of 22 observations
 data_f_girl <- filter(dat, gender=="girl")
 # The girl who has 22 records
@@ -217,18 +230,29 @@ girlID <- data_f_girl %>% group_by(ID) %>%
 data_f_girl <- filter(data_f_girl, ID %in% girlID)
 
 ggplot(data_f_girl, aes(x=age, y=height, color=ID)) + geom_line()
+```
 
+The record(ID = 140) is an outlier.
+
+```{r echo= F}
 data_f_girl <- data_f_girl[data_f_girl$ID != 140,]
 ggplot(data_f_girl, aes(x=age, y=height, color=ID)) + geom_line()
 ```
 
-Delete the outliear(ID = 140)
+## Fit the data to find the best model
+   model 1: height~age
 
-## Find the best the degrees of freedom (By BIC) for girl dataset before fit the model
+   model 2: log(height)~age
+
+   model 3: height~log(age)
+
+   model 4: log(height)~log(age)
+
+## Find the the degrees of freedom (By BIC)
    The degrees of freedom (DF) indicate the number of independent values 
    that can vary in an analysis without breaking any constraints.
 
-```{r}
+```{r echo= F}
 ## find the best degree freedom for girl
 par(mfrow=c(2,2), cex=1.1)
 bestDfG <- dfset(x = age, y = height, data = data_f_girl, FUN = BIC, df = 1:10, plot = TRUE, main='height~age (girl)')
@@ -240,10 +264,10 @@ bestDfG4 <- dfset(x = log(age), y = log(height), data = data_f_girl, FUN = BIC, 
 When Df = 3, the BIC is the lowest, choose the df = 3 for fitting model (height~log(age), log(height)~log(age)).
 When Df = 4, the BIC is the lowest, choose the df = 4 for fitting model (height~age, log(height)~age).
 
-## Fit girl's data height versus age
-   Draw fitted distance and velocity curves
+## Fit the models by using sitar model
+   Fit the four models and compare the variance, residual and AIC to find the best model.
 
-```{r}
+```{r echo= F}
 ## The growth curve for girl's height
 fitHG <- sitar(x = age, y = height, id = ID, data = data_f_girl, df= bestDfG[1])
 #summary(fitHG)
@@ -260,17 +284,16 @@ fitHG4 <- sitar(x = log(age), y = log(height), id = ID, data = data_f_girl, df= 
 data.frame(formula=c('height~age','log(height)~age','height~log(age)','log(height)~log(age)'), variance=c('96.68','96.63','96.30','96.29'), residual=c('1.0929107','0.007419857','1.10268133','0.007452629'), AIC=c('2930.909','-5201.022','2942.887','-5194.83'), Converge=c('True','False','True','True'))
 ```
 
-The log(height)~log(age) is the best fitted model.
+Although, the log(height)~age model is the best, however, it has convergence error. So I chose the log(height)~log(age) model.
 
-```{r}
+## The distance and velocity curves
+   Distance curve(left y axis)(Black solid line): the amount of height achieved at a given age.
 
-## draw fitted distance and velocity curves with velocity curve in blue
+   Velocity curve(right y axis)(Blue dash line): the rate of growth at a given age.
+
+```{r echo= F}
 suppressMessages(plot(fitHG4, y2par=list(col='blue'), apv=TRUE))
 ```
-
-The distance curve(solid black line) (left y axis) indicates the amount of height achieved at a given age.
-
-The velocity curve(dashed blue line) (right y axis) indicates the rate of growth at a given age.
 
 1. The growth rate:
 
@@ -278,30 +301,27 @@ The velocity curve(dashed blue line) (right y axis) indicates the rate of growth
    
 2. The growth velocity:
    a) It reached the peak of 7.031 at the age of 11.19.
-   b) It is relatively constant between 6~9 year-old.
-   c) It increased rapidly between 9~11.19 year-old.
-   d) It declined rapidly between 11.19~16 year-old.
-   e) It is relatively constant after 16 year-old.
+   b) It declined between 6~8 year-old.
+   c) It increased between 8~11.19 year-old.
+   d) It declined rapidly between 11.19~15 year-old.
+   e) It is relatively constant after 15 year-old.
 
+## Check the significant of fixed and random effect factors
 
-```{r}
-anova(fitHG)
+```{r echo= F}
+anova(fitHG4)
 ```
 
-The fixed effect s1, s2, s3, s4 are singificant.(p-value < 0.05).
-
-The random effect of α(a) and γ(c) are singificant.(p-value < 0.05).
-
-The random effect of β(b) is not significant(p-value > 0.05).
+The fixed effect s1, s2, s3, s4 and the random effect of α(a), β(b), γ(c) are singificant.(p-value < 0.05).
 
 ## Compare the random effect (α(a) + β(b) + γ(c))
    Increase each random effect SITAR parameter in model, figure out the parameters how to effect the model.
    
-```{r}
+```{r echo= F}
 suppressMessages(ggplot(plot_D(fitHG4), aes(.x, .y, colour=.id)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("The growth curve for each girl"))
 ```
 
-```{r}
+```{r echo= F}
 mga <- sitar(x=log(age), y=log(height), id=ID, data=data_f_girl, df=bestDfG4[1], random = 'a')
 
 suppressMessages(ggplot(plot_a(mga), aes(.x, .y, colour=.id)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(a) Random Effect by α(a)"))
@@ -311,7 +331,7 @@ resultA <- data.frame(Type=c('Random Effect by a'), variance=varexp(mga), residu
 resultA
 ```
 
-```{r}
+```{r echo= F}
 mgab <- sitar(x=log(age), y=log(height), id=ID, data=data_f_girl, df=bestDfG4[1], random = 'a+b')
 
 suppressMessages(ggplot(plot_a(mgab), aes(.x, .y, colour=.id)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(b) Random Effect by α(a) + β(b)"))
@@ -321,27 +341,28 @@ resultB <- data.frame(Type=c('Random Effect by a + b'), variance=varexp(mgab), r
 resultB
 ```
 
-```{r}
+```{r echo= F}
 suppressMessages(ggplot(plot_a(fitHG4), aes(.x, .y, colour=.id)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(c) Random Effect by α(a) + β(b) + (c)"))
 #summary(fitHG4)
 
 resultC <- data.frame(Type=c('Random Effect by a + b + c'), variance=varexp(fitHG4), residual=c('0.007452629'), AIC=c('-5194.83'), BIC=c('-5133.704'))
 resultC
-
 ```
 
-```{r}
+```{r echo= F}
 resultAB <- merge(resultA, resultB, all=T)
 merge(resultAB, resultC, all=T)
-
-suppressMessages(ggplot(plot_d(fitHG4), aes(.x, .y)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(d) Growth Curve with Random Effect by α(a) + β(b) + (c)"))
 ```
 
 The model with all random effects is best.
-    
+
+```{r echo= F}
+suppressMessages(ggplot(plot_d(fitHG4), aes(.x, .y)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(d) Growth Curve with Random Effect by α(a) + β(b) + (c)"))
+```
+
 ## Compare the growth rate and velocity of height by gender
 
-```{r}
+```{r echo= F}
 suppressMessages(plot(fitHB3, opt='d', col='blue', y2par=list(col='blue')))
 suppressMessages(lines(fitHG4, opt='d', col='red', y2par=list(col='red')))
 title("The Growth Curve (Boy:blue, Girl:red)")
@@ -349,20 +370,24 @@ title("The Growth Curve (Boy:blue, Girl:red)")
 
 1. 6-10 year-old: Boys and Girls almost have the same rate.
 
-2. 10~13.5 year-old: Girls are a little bit higer than boys.
+2. 10~13.5 year-old: Girls are a little higer than boys.
 
-3. 13.6~18 year-old: Boys are significant high than Girls.
+3. 13.6~18 year-old: Boys are significant higher than Girls.
    
-```{r}
+```{r echo= F}
 suppressMessages(plot(fitHB3, opt='v', col='blue', y2par=list(col='blue')))
 suppressMessages(lines(fitHG4, opt='v', col='red', y2par=list(col='red')))
 title("The Growth Curve : velocity (Boy:blue, Girl:red)")
 ```
 
-1. 6~9 year-old: Boys and Girls almost are near to each other.
+1. 6~9 year-old: Boys and Girls are near to each other and deline.
 
-2. 9~10.5 year-old: Boys and girls have different trend, Boys delined, Girls increased 
+2. 9~11 year-old: Boys and girls have different trend, Boys continue delining, Girls increase and reach the top at 11 year-old.
 
-3. 10.5~17 year-old: Girls keep declining fast, Boys reach the top at 13.5, then declined fast
+3. 11~15.5 year-old: Girls keep declining fast, Boys increase fast and reach the top at 13.5, then declined fast til 16.5 year-old.
 
-4. 17~18 year-old: Grils and Boys are near to each other.
+4. The girls keep constant from 15.5 year-old, the boys keep constant from 17 year-old and near to each other.
+
+## Conclusion
+
+The fact that the model fits well both in boys and girls. Although, the log height scale versus age is the best model, however, the convergence error happened when fit the model, so chose the log height scale versus log age scale as the model. Compared the growth curve, we can see that the difference of growth rate and velocity by gender at a certain age.  
