@@ -1,9 +1,64 @@
 ---
-title: "ST606_W6"
-author: "YANG WANG"
-date: "2020/5/29"
-output: html_document
+geometry: left=3.8cm,right=2.5cm,top=2.5cm,bottom=2.5cm
+header-includes: \usepackage{amsmath} \usepackage{pdflscape}\usepackage[utf8]{inputenc}
+output:
+  html_document:
+    df_print: paged
+  pdf_document:
+    number_sections: yes
+papersize: a4
 ---
+
+\pagenumbering{roman}  
+
+\newpage                 
+
+\begin{center}       
+
+\bigskip
+\bigskip
+\bigskip
+\bigskip
+
+
+\LARGE{ST606 - The growth(height) curve analysis for the 6–18-year-old children}
+
+\bigskip
+\bigskip
+
+\large{The growth curve analysis by using the SuperImposition by Translation And Rotation (SITAR) model}
+
+\bigskip
+\bigskip
+\bigskip
+\bigskip
+\bigskip
+\bigskip
+\bigskip
+\bigskip
+
+\bigskip
+\bigskip
+\bigskip
+\bigskip
+\bigskip
+\bigskip
+\bigskip
+\bigskip
+
+\bigskip
+
+\large{Yang Wang (19250003)}
+
+\bigskip
+
+\end{center}    
+
+\newpage             
+
+\tableofcontents
+
+\newpage 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -18,11 +73,24 @@ suppressMessages(library(ggplot2))
 suppressMessages(library(sitar))
 ```
 
-## Background
-The growth curve analysis is a statistical issue in life course. 
-Height in puberty involves a growth spurt, the timing and intensity of which varies between individuals.
+\pagenumbering{arabic} 
 
-## Methods
+# Abstract
+[TODO]
+
+# Introduction
+[TODO]
+
+# Background
+[TODO]
+
+A growth curve is an empirical model of the evolution of a quantity over time. The growth curves are widely used in biology for quantities such as population size or biomass (in population ecology and demography, for population growth analysis), individual body height or biomass (in physiology, for growth analysis of individuals).
+
+Growth is influenced by many factors such as heredity, genetic or congenital factors, illness and medications, nutrition, hormones, and psychosocial environment. A child growth curve is an important standard to help parents to find out whether or not their children follow a normal growth pattern. In fact, hundreds of medical issues can affect children's growth. An abnormal growth pattern is often the earliest indication of an underlying medical condition. Following a normal growth pattern is a good indicator of a child's overall good health.
+
+The growth curve analysis is a statistical issue in life course. Height in puberty involves a growth spurt, the timing and intensity of which varies between individuals.
+
+# Methods
 I used the SuperImposition by Translation And Rotation (SITAR) model, a shape invariant model with a single fitted curve. Curves for individuals are matched to the mean curve by shifting their curve up–down (representing differences in mean size) and left–right (for differences in growth tempo), and the age scale is also shrunk or stretched to indicate how fast time passes in the individual (i.e. velocity). 
 These three parameters per individual are estimated as random effects while fitting the curve. 
 The outcome is a mean curve plus triplets of parameters per individual (size, tempo and velocity) that summarize the individual growth patterns.
@@ -30,23 +98,23 @@ The outcome is a mean curve plus triplets of parameters per individual (size, te
 ## The SITAR model
 The method used to summarize the individual growth curves.
 This is a shape invariant model that involves fitting the following random effects model to the set of height growth curves.
-![unchanged image](formula.gif)
+![unchanged image](formula.png)
 
 where yit is height for subject i at age t, h(t) is a natural cubic spline curve of height vs age, 
-and αi, βi and γi are subject-specific random effects. 
-The aim is to choose the values of αi, βi and γi to make the individual growth curves as similar as possible.
+and $\alpha$i, $\beta$i and $\gamma$i are subject-specific random effects. 
+The aim is to choose the values of $\alpha$i, $\beta$i and $\gamma$i to make the individual growth curves as similar as possible.
 
-  1. αi is a random height intercept that adjusts for differences in mean height—here it is termed size.
-  Geometrically it can be thought of as a subject-specific shift up or down or translation in the spline curve, with αi smaller for shorter children.
+  1. $\alpha$i is a random height intercept that adjusts for differences in mean height—here it is termed size.
+  Geometrically it can be thought of as a subject-specific shift up or down or translation in the spline curve, with $\alpha$i smaller for shorter children.
   
-  2. βi is a random age intercept to adjust for differences in the timing of the pubertal growth spurt in individuals, and it is here called tempo.
-  Geometrically it corresponds to a subject-specific left–right shift or translation in the spline curve, with βi negative for early puberty and positive for late.
+  2. $\beta$i is a random age intercept to adjust for differences in the timing of the pubertal growth spurt in individuals, and it is here called tempo.
+  Geometrically it corresponds to a subject-specific left–right shift or translation in the spline curve, with $\beta$i negative for early puberty and positive for late.
   
-  3. γi is a random age scaling that adjusts for the duration of the growth spurt in individuals. Its parameterization as exp(–γi) ensures that both positive and negative values are permissible, with zero corresponding to average velocity, and the minus sign means that it measures velocity rather than its inverse. 
+  3. $\gamma$i is a random age scaling that adjusts for the duration of the growth spurt in individuals. Its parameterization as exp(–$\gamma$i) ensures that both positive and negative values are permissible, with zero corresponding to average velocity, and the minus sign means that it measures velocity rather than its inverse. 
   
-Geometrically it corresponds to a shrinking or stretching of the age scale. Thus for a child with a relatively short spurt and a steep growth curve, γi is positive to stretch the age scale and reduce the slope (i.e. peak velocity). Conversely, if γi is negative the age scale is shrunk and the curve slope increased. For this reason the parameter is termed velocity.
+Geometrically it corresponds to a shrinking or stretching of the age scale. Thus for a child with a relatively short spurt and a steep growth curve, $\gamma$i is positive to stretch the age scale and reduce the slope (i.e. peak velocity). Conversely, if $\gamma$i is negative the age scale is shrunk and the curve slope increased. For this reason the parameter is termed velocity.
 
-## Clean Data
+# Clean Data
   1. Read the data from excel file.
   2. Delete the data that the height is NA.
   3. Rename the column name.
@@ -75,11 +143,11 @@ dataSta <- data.frame(All = nrow(dat_ex_all), Object = nrow(dat), Deleted = nrow
 dataSta
 ```
 
-## The DataSets
+# The DataSets
    The datasets are heights for boy(31) and girl(38) at the stage between 2007 and 2018 (6-18 year-old),
    and have the complete set of 22 observations between the ages of 6 and 18 years.
 
-## The first dataset(Boys)
+# The first dataset (Boys)
    The 31 boys who have the complete set of 22 observations.
   
 ```{r echo= F}
@@ -89,7 +157,7 @@ boyID <- data_f_boys %>% group_by(ID) %>%
   summarise(nid = n())  %>% filter(nid == 22) %>% pull(ID)
 data_f_boys <- filter(data_f_boys, ID %in% boyID)
 ##ggplot(data_f_boys, aes(x=age, y=height, color=ID))  + geom_line() + facet_wrap(~ID)
-ggplot(data_f_boys, aes(x=age, y=height, color=ID)) + geom_line()
+ggplot(data_f_boys, aes(x=age, y=height, color=ID)) + geom_line() + theme(legend.position = "none")
 ```
 
 ## Fit the data to find the best model
@@ -101,20 +169,25 @@ ggplot(data_f_boys, aes(x=age, y=height, color=ID)) + geom_line()
    
    model 4: log(height)~log(age)
 
+\newpage 
+
 ## Find the the degrees of freedom (By BIC)
    The degrees of freedom (DF) indicate the number of independent values 
    that can vary in an analysis without breaking any constraints.
 
 ```{r echo= F}
 ## find the best degree freedom for boy
-par(mfrow=c(2,2), cex=1.1)
+par(mfrow=c(1,2), cex=1.1)
 bestDf <- dfset(x = age, y = height, data = data_f_boys, FUN = BIC, df = 1:10, plot = TRUE, main="height~age (Boy)")
 bestDf1 <- dfset(x = age, y = log(height), data = data_f_boys, FUN = BIC, df = 1:10, plot = TRUE, main="log(height)~age (Boy)")
+par(mfrow=c(1,2), cex=1.1)
 bestDf2 <- dfset(x = log(age), y = height, data = data_f_boys, FUN = BIC, df = 1:10, plot = TRUE, main="height~log(age) (Boy)")
 bestDf3 <- dfset(x = log(age), y = log(height), data = data_f_boys, FUN = BIC, df = 1:10, plot = TRUE, main="log(height)~log(age) (Boy)")
 ```
 
 When Df = 4, the BICs are the lowest, choose the df = 4 for the four models.
+
+\newpage 
 
 ## Fit the models by using sitar model
    fit the four models and compare the variance, residual and AIC to find the best model.
@@ -164,11 +237,11 @@ anova(fitHB3)
 
 The fixed effect s1, s2, s3, s4 are singificant.(p-value < 0.05).
 
-The random effect of α(a) and γ(c) are singificant.(p-value < 0.05).
+The random effect of $\alpha$(a) and $\gamma$(c) are singificant.(p-value < 0.05).
 
-The random effect of β(b) is not significant(p-value > 0.05).
+The random effect of $\beta$(b) is not significant(p-value > 0.05).
 
-## Compare the random effect (α(a) + β(b) + γ(c))
+## Compare the random effect ($\alpha$(a) + $\beta$(b) + $\gamma$(c))
    Increase each random effect SITAR parameter in model, figure out the parameters how to effect the model 
 
 ```{r echo= F}
@@ -177,29 +250,30 @@ suppressMessages(ggplot(plot_D(fitHB3), aes(.x, .y, colour=.id)) + labs(x='age',
 ```
 
 ```{r echo= F}
-# Random Effect by α(a)
+# Random Effect by $\alpha$(a)
 mba <- sitar(x=log(age), y=log(height), id=ID, data=data_f_boys, df=bestDf3[1], random = 'a')
-suppressMessages(ggplot(plot_a(mba), aes(.x, .y, colour=.id)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(a) Random Effect by α(a)"))
-#summary(mba)
+suppressMessages(ggplot(plot_a(mba), aes(.x, .y, colour=.id)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(a) Random Effect by a"))
+summary(mba)
+
 
 resultA <- data.frame(Type=c('Random Effect by a'), variance=varexp(mba), residual=c('0.01741566'), AIC=c('-3424.986'), BIC=c('-3393.311'))
 resultA
 ```
 
 ```{r echo= F}
-# Random Effect by α(a) + β(b)
+# Random Effect by $\alpha$(a) + $\beta$(b)
 mbab <- sitar(x=log(age), y=log(height), id=ID, data=data_f_boys, df=bestDf3[1], random = 'a+b')
-suppressMessages(ggplot(plot_a(mbab), aes(.x, .y, colour=.id)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(b) Random Effect by α(a) + β(b)"))
-#summary(mbab)
+suppressMessages(ggplot(plot_a(mbab), aes(.x, .y, colour=.id)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(b) Random Effect by a + b"))
+summary(mbab)
 
 resultB <- data.frame(Type=c('Random Effect by a + b'), variance=varexp(mbab), residual=c('0.01158098'), AIC=c('-3845.512'), BIC=c('-3800.262'))
 resultB
 ```
 
 ```{r echo= F}
-# Random Effect by α(a) + β(b) + γ(c)
-suppressMessages(ggplot(plot_a(fitHB3), aes(.x, .y, colour=.id)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(c) Random Effect by α(a) + β(b) + (c)"))
-#summary(fitHB3)
+# Random Effect by $\alpha$(a) + $\beta$(b) + $\gamma$(c)
+suppressMessages(ggplot(plot_a(fitHB3), aes(.x, .y, colour=.id)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(c) Random Effect by a + b + c"))
+summary(fitHB3)
 
 resultC <- data.frame(Type=c('Random Effect by a + b + c'), variance=varexp(fitHB3), residual=c('0.008600255'), AIC=c('-4131.781'), BIC=c('-4068.43'))
 resultC
@@ -213,12 +287,14 @@ merge(resultAB, resultC, all=T)
 The model with all random effects is best. 
 
 ```{r echo= F}
-# Growth Curve with Random Effect by α(a) + β(b) + γ(c)
-suppressMessages(ggplot(plot_d(fitHB3), aes(.x, .y)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(d) Growth Curve with Random Effect by α(a) + β(b) + (c)"))
+# Growth Curve with Random Effect by $\alpha$(a) + $\beta$(b) + $\gamma$(c)
+suppressMessages(ggplot(plot_d(fitHB3), aes(.x, .y)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(d) Growth Curve with Random Effect by a + b + b"))
 #summary(fitHB3)
 ```
 
-## The second dataset(Girls)
+\newpage  
+
+# The second dataset (Girls)
   The 38 girls who have the complete set of 22 observations.
   
 ```{r echo= F}
@@ -229,14 +305,14 @@ girlID <- data_f_girl %>% group_by(ID) %>%
   summarise(nid = n())  %>% filter(nid == 22) %>% pull(ID)
 data_f_girl <- filter(data_f_girl, ID %in% girlID)
 
-ggplot(data_f_girl, aes(x=age, y=height, color=ID)) + geom_line()
+ggplot(data_f_girl, aes(x=age, y=height, color=ID)) + geom_line() + geom_line() + theme(legend.position = "none")
 ```
 
 The record(ID = 140) is an outlier.
 
 ```{r echo= F}
 data_f_girl <- data_f_girl[data_f_girl$ID != 140,]
-ggplot(data_f_girl, aes(x=age, y=height, color=ID)) + geom_line()
+ggplot(data_f_girl, aes(x=age, y=height, color=ID)) + geom_line() + geom_line() + theme(legend.position = "none")
 ```
 
 ## Fit the data to find the best model
@@ -254,9 +330,11 @@ ggplot(data_f_girl, aes(x=age, y=height, color=ID)) + geom_line()
 
 ```{r echo= F}
 ## find the best degree freedom for girl
-par(mfrow=c(2,2), cex=1.1)
+par(mfrow=c(1,2), cex=1.1)
 bestDfG <- dfset(x = age, y = height, data = data_f_girl, FUN = BIC, df = 1:10, plot = TRUE, main='height~age (girl)')
 bestDfG2 <- dfset(x = age, y = log(height), data = data_f_girl, FUN = BIC, df = 1:10, plot = TRUE, main='log(height)~age (girl)')
+
+par(mfrow=c(1,2), cex=1.1)
 bestDfG3 <- dfset(x = log(age), y = height, data = data_f_girl, FUN = BIC, df = 1:10, plot = TRUE, main='height~log(age) (girl)')
 bestDfG4 <- dfset(x = log(age), y = log(height), data = data_f_girl, FUN = BIC, df = 1:10, plot = TRUE, main='log(height)~log(age) (girl)')
 ```
@@ -312,9 +390,9 @@ suppressMessages(plot(fitHG4, y2par=list(col='blue'), apv=TRUE))
 anova(fitHG4)
 ```
 
-The fixed effect s1, s2, s3, s4 and the random effect of α(a), β(b), γ(c) are singificant.(p-value < 0.05).
+The fixed effect s1, s2, s3, s4 and the random effect of $\alpha$(a), $\beta$(b), $\gamma$(c) are singificant.(p-value < 0.05).
 
-## Compare the random effect (α(a) + β(b) + γ(c))
+## Compare the random effect ($\alpha$(a) + $\beta$(b) + $\gamma$(c))
    Increase each random effect SITAR parameter in model, figure out the parameters how to effect the model.
    
 ```{r echo= F}
@@ -324,7 +402,7 @@ suppressMessages(ggplot(plot_D(fitHG4), aes(.x, .y, colour=.id)) + labs(x='age',
 ```{r echo= F}
 mga <- sitar(x=log(age), y=log(height), id=ID, data=data_f_girl, df=bestDfG4[1], random = 'a')
 
-suppressMessages(ggplot(plot_a(mga), aes(.x, .y, colour=.id)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(a) Random Effect by α(a)"))
+suppressMessages(ggplot(plot_a(mga), aes(.x, .y, colour=.id)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(a) Random Effect by a"))
 #summary(mga)
 
 resultA <- data.frame(Type=c('Random Effect by a'), variance=varexp(mga), residual=c('0.01423831'), AIC=c('-4416.925'), BIC=c('-4388.713'))
@@ -334,7 +412,7 @@ resultA
 ```{r echo= F}
 mgab <- sitar(x=log(age), y=log(height), id=ID, data=data_f_girl, df=bestDfG4[1], random = 'a+b')
 
-suppressMessages(ggplot(plot_a(mgab), aes(.x, .y, colour=.id)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(b) Random Effect by α(a) + β(b)"))
+suppressMessages(ggplot(plot_a(mgab), aes(.x, .y, colour=.id)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(b) Random Effect by a + b"))
 #summary(mgab)
 
 resultB <- data.frame(Type=c('Random Effect by a + b'), variance=varexp(mgab), residual=c('1.3751748'), AIC=c('3195.192'), BIC=c('3242.212'))
@@ -342,7 +420,7 @@ resultB
 ```
 
 ```{r echo= F}
-suppressMessages(ggplot(plot_a(fitHG4), aes(.x, .y, colour=.id)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(c) Random Effect by α(a) + β(b) + (c)"))
+suppressMessages(ggplot(plot_a(fitHG4), aes(.x, .y, colour=.id)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(c) Random Effect by a + b + c"))
 #summary(fitHG4)
 
 resultC <- data.frame(Type=c('Random Effect by a + b + c'), variance=varexp(fitHG4), residual=c('0.007452629'), AIC=c('-5194.83'), BIC=c('-5133.704'))
@@ -357,10 +435,12 @@ merge(resultAB, resultC, all=T)
 The model with all random effects is best.
 
 ```{r echo= F}
-suppressMessages(ggplot(plot_d(fitHG4), aes(.x, .y)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(d) Growth Curve with Random Effect by α(a) + β(b) + (c)"))
+suppressMessages(ggplot(plot_d(fitHG4), aes(.x, .y)) + labs(x='age', y='height') + geom_line(show.legend=FALSE) + ggtitle("(d) Growth Curve with Random Effect by a + b + c"))
 ```
 
-## Compare the growth rate and velocity of height by gender
+\newpage  
+
+# Compare the growth rate and velocity of height by gender
 
 ```{r echo= F}
 suppressMessages(plot(fitHB3, opt='d', col='blue', y2par=list(col='blue')))
@@ -388,6 +468,6 @@ title("The Growth Curve : velocity (Boy:blue, Girl:red)")
 
 4. The girls keep constant from 15.5 year-old, the boys keep constant from 17 year-old and near to each other.
 
-## Conclusion
+# Conclusion
 
 The fact that the model fits well both in boys and girls. Although, the log height scale versus age is the best model, however, the convergence error happened when fit the model, so chose the log height scale versus log age scale as the model. Compared the growth curve, we can see that the difference of growth rate and velocity by gender at a certain age.  
